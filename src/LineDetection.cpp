@@ -32,6 +32,20 @@ LineDetection::LineDetection() : points{
     adcList[5] = &adc6;
 }
 
+void LineDetection::lineSensorDebug() {
+    int chBig = 12;
+    for (int i = 0; i < 48; i++) {
+        if (i <= 11) {
+            chBig = (12-i);
+        } else {
+            chBig = (48 - (i-12));
+        }
+
+        Serial.println("Sensor" + String(i) + String(adcList[(chBig - 1) % 8]->analogRead((int)((chBig - 1)/8) + 1)));
+    }
+
+}
+
 void LineDetection::updateLineSensors() {
     int chBig = 12;
     for (int i = 0; i < 48; i++) {
@@ -54,6 +68,7 @@ void LineDetection::updateLineSensors() {
 
 
 double LineDetection::getLineAngle() {
+    updateLineSensors();
     std::vector<int> pos;
     for (int i = 0; i < 48; i++) {
         if (sensorVals[i] == 1)

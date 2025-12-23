@@ -16,6 +16,7 @@ class LineDetection {
         double getLineAngle();
         Point points[48];
         void updateLineSensors();
+        void lineSensorDebug();
         double sensorVals[48];
         double calibrateVals[48];
 
@@ -38,8 +39,6 @@ class LineDetection {
         int miso = 12;
 
         MCP3008* adcList[6];
-
-        int channelToRead = 0;
 };
 
 #endif 

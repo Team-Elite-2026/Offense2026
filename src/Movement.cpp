@@ -88,10 +88,10 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
     intended_movement_angle += 360;
   }
   
-    double powerFR = Trig::Sin(intended_movement_angle - 53);
-    double powerRR = Trig::Sin(intended_movement_angle - 127);
-    double powerRL = Trig::Sin(intended_movement_angle - 233);
-    double powerFL = Trig::Sin(intended_movement_angle - 307);
+    double powerFR = Trig::Sin(intended_movement_angle - 55);
+    double powerRR = Trig::Sin(intended_movement_angle - 125);
+    double powerRL = Trig::Sin(intended_movement_angle - 235);
+    double powerFL = Trig::Sin(intended_movement_angle - 305);
 
     max_power = fmax(fmax(abs(powerFR), abs(powerFL)), fmax(abs(powerRR), abs(powerRL)));
 

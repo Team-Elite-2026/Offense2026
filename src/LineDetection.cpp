@@ -74,51 +74,67 @@ void LineDetection::updateLineSensors() {
 
 double LineDetection::getLineAngle() {
     updateLineSensors();
-    std::vector<int> pos;
-    for (int i = 0; i < 48; i++) {
-        if (activatedVals[i] == 1)
-            pos.push_back(i);
+    // std::vector<int> pos;
+    // for (int i = 0; i < 48; i++) {
+    //     if (activatedVals[i] == 1)
+    //         pos.push_back(i);
             
-    }
+    // }
 
-    int sensNum1 = -1, sensNum2 = -1;
-    int bestDist = -1;
+    // int sensNum1 = -1, sensNum2 = -1;
+    // int bestDist = -1;
     
-    for (int i = 0; i < (int)pos.size(); i++) {
-        for (int j = i + 1; j < (int)pos.size(); j++) {
-            int dist = Trig::getDist(points[pos[i]], points[pos[j]]);
-            if (dist > bestDist) {
-                bestDist = dist;
-                sensNum1 = pos[i];
-                sensNum2 = pos[j];
-            }
+    // for (int i = 0; i < (int)pos.size(); i++) {
+    //     for (int j = i + 1; j < (int)pos.size(); j++) {
+    //         int dist = Trig::getDist(points[pos[i]], points[pos[j]]);
+    //         if (dist > bestDist) {
+    //             bestDist = dist;
+    //             sensNum1 = pos[i];
+    //             sensNum2 = pos[j];
+    //         }
+    //     }
+    // }
+    // Serial.print("Sens 1: ");
+    // Serial.println(sensNum1);
+    // Serial.print("Sens 2: ");
+    // Serial.println(sensNum2);
+    // Point p1 = points[sensNum1];
+    // Point p2 = points[sensNum2];
+    // Serial.print("Point 1: (");
+    // Serial.print(p1.x);
+    // Serial.print(", ");
+    // Serial.print(p1.y);
+    // Serial.println(")");
+
+    // Serial.print("Point 2: (");
+    // Serial.print(p2.x);
+    // Serial.print(", ");
+    // Serial.print(p2.y);
+    // Serial.println(")");
+    double xTotal = 0;
+    double yTotal = 0;
+    int count = 0;
+    for(int i =0; i<48; i++) {
+        if(activatedVals[i]==1) {
+            xTotal += points[i].x;
+            yTotal += points[i].y;
+            count++;
         }
     }
-    Serial.print("Sens 1: ");
-    Serial.println(sensNum1);
-    Serial.print("Sens 2: ");
-    Serial.println(sensNum2);
-    Point p1 = points[sensNum1];
-    Point p2 = points[sensNum2];
-    Serial.print("Point 1: (");
-    Serial.print(p1.x);
-    Serial.print(", ");
-    Serial.print(p1.y);
-    Serial.println(")");
+    if(count > 0) {
+        xTotal /= count;
+        yTotal /= count;
+    }
+    // Doing Inverse Recipricol in the Function
+    double angle = atan2(xTotal*-1, yTotal);
+    // double perpendicularSlope = -1 / slope;
 
-    Serial.print("Point 2: (");
-    Serial.print(p2.x);
-    Serial.print(", ");
-    Serial.print(p2.y);
-    Serial.println(")");
-
-    double slope = Trig::getSlope(p1, p2);
-    double perpendicularSlope = -1 / slope;
-
-    double dotProd = perpendicularSlope;
-    double mags = sqrt(1 + pow(perpendicularSlope,2));
-
-    return acos(dotProd/mags) * (180/M_PI);
+    // double dotProd = perpendicularSlope;
+    // double mags = sqrt(1 + pow(perpendicularSlope,2));
+    // Convert to Radians
+    angle *= 180/M_PI;
+    angle = (angle<0) ? angle+360 : angle;
+    return angle;
 
     // double angle = fmod((90 - atan2(perpendicularSlope, 1) * (180/M_PI)), 360);
 

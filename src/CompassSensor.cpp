@@ -2,8 +2,12 @@
 #include <Wire.h>
 
 CompassSensor::CompassSensor() {
-    Wire.begin();
-    bno = Adafruit_BNO055(55, 0x28, &Wire);
+    
+}
+
+void CompassSensor::begin() {
+  Wire.begin();
+    bno = Adafruit_BNO055(55, 0x28, &Wire2);
     if(!bno.begin())
   {
     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");

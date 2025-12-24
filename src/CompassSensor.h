@@ -8,6 +8,7 @@ class CompassSensor {
     public:
     CompassSensor();
     void callibrate();
+    void begin();
     int currentOffset();
     int getOrientation();
     int currentOffset(double goalAngle);
@@ -16,5 +17,6 @@ class CompassSensor {
     private:
     Adafruit_BNO055 bno;
     sensors_event_t event;
+    
 };
 #endif // COMPASSSENSOR_H

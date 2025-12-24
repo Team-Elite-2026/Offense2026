@@ -10,7 +10,7 @@ class Calibration {
         Calibration(LineDetection& lineDetection, CompassSensor& compassSensor);
         void calibrateLineSensors(); 
         void calibrateCompassSensor();
-        int calibrateVal[24];
+        int calibrateVal[48];
     private:
         LineDetection& lineDetection;
         CompassSensor& compassSensor;

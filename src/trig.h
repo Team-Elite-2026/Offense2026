@@ -11,6 +11,7 @@ public:
     static double avg(double a, double b);
     static double toDegrees(double radians);
     static double getSlope(Point p1, Point p2);
+    static double getDist(Point p1, Point p2);
 };
 
 #endif

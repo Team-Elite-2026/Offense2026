@@ -40,27 +40,32 @@ void LineDetection::lineSensorDebug() {
         } else {
             chBig = (48 - (i-12));
         }
+        // Serial.print("ADC NUM: ");
+        // Serial.println((chBig - 1) % 8);
+        // Serial.print("Sensor Read: ");
+        // Serial.println((int)((chBig - 1)/8) + 1);
 
-        Serial.println("Sensor" + String(i) + String(adcList[(chBig - 1) % 8]->analogRead((int)((chBig - 1)/8) + 1)));
+        Serial.println("Sensor " + String(i) + ": " + String(adcList[(chBig - 1) / 8]->analogRead((int)((chBig - 1)/8) + 1)));
     }
 
 }
 
 void LineDetection::updateLineSensors() {
-    int chBig = 12;
+    int chBig = 36;
     for (int i = 0; i < 48; i++) {
-        if (i <= 11) {
-            chBig = (12-i);
+        if (i <= 12) {
+            chBig = (36+i);
         } else {
-            chBig = (48 - (i-12));
+            chBig = i-12;
         }
 
-        // FOR DEBUGGING PURPOSES: sensorVals[i] = adcList[(chBig - 1) % 8]->analogRead((int)((chBig - 1)/8) + 1);
+        // FOR DEBUGGING PURPOSES: 
+        sensorVals[i] = adcList[(chBig - 1) / 8]->analogRead((int)((chBig - 1)/8) + 1);
 
-       if (sensorVals[i] > calibrateVals[i]) {
-            sensorVals[i] = 1;
+       if (sensorVals[i] > calibrateVals[i]+40) {
+            activatedVals[i] = 1;
         } else {
-            sensorVals[i] = 0;
+            activatedVals[i] = 0;
        }
     }
 }
@@ -71,36 +76,51 @@ double LineDetection::getLineAngle() {
     updateLineSensors();
     std::vector<int> pos;
     for (int i = 0; i < 48; i++) {
-        if (sensorVals[i] == 1)
+        if (activatedVals[i] == 1)
             pos.push_back(i);
+            
     }
 
     int sensNum1 = -1, sensNum2 = -1;
     int bestDist = -1;
-
+    
     for (int i = 0; i < (int)pos.size(); i++) {
         for (int j = i + 1; j < (int)pos.size(); j++) {
-            int dist = pos[j] - pos[i];
-            if (dist <= 24 && dist > bestDist) {
+            int dist = Trig::getDist(points[pos[i]], points[pos[j]]);
+            if (dist > bestDist) {
                 bestDist = dist;
                 sensNum1 = pos[i];
                 sensNum2 = pos[j];
             }
         }
     }
-
+    Serial.print("Sens 1: ");
+    Serial.println(sensNum1);
+    Serial.print("Sens 2: ");
+    Serial.println(sensNum2);
     Point p1 = points[sensNum1];
     Point p2 = points[sensNum2];
+    Serial.print("Point 1: (");
+    Serial.print(p1.x);
+    Serial.print(", ");
+    Serial.print(p1.y);
+    Serial.println(")");
+
+    Serial.print("Point 2: (");
+    Serial.print(p2.x);
+    Serial.print(", ");
+    Serial.print(p2.y);
+    Serial.println(")");
 
     double slope = Trig::getSlope(p1, p2);
     double perpendicularSlope = -1 / slope;
 
-    // double dotProd = perpendicularSlope;
-    // double mags = sqrt(1 + pow(perpendicularSlope,2));
+    double dotProd = perpendicularSlope;
+    double mags = sqrt(1 + pow(perpendicularSlope,2));
 
-    // return acos(dotProd/mags);
+    return acos(dotProd/mags) * (180/M_PI);
 
-    double angle = fmod((90 - atan2(perpendicularSlope, 1) * (M_PI/180)), 360);
+    // double angle = fmod((90 - atan2(perpendicularSlope, 1) * (180/M_PI)), 360);
 
-    return angle;
+    // return angle;
 }

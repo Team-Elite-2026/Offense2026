@@ -19,6 +19,7 @@ class LineDetection {
         void lineSensorDebug();
         double sensorVals[48];
         double calibrateVals[48];
+        int activatedVals[48];
 
     private:
         MCP3008 adc1;

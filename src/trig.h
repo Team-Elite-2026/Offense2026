@@ -12,6 +12,7 @@ public:
     static double toDegrees(double radians);
     static double getSlope(Point p1, Point p2);
     static double getDist(Point p1, Point p2);
+    static double dotProduct(int num1, int num2);
 };
 
 #endif

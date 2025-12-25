@@ -3,7 +3,7 @@
 #include <cmath>
 #include <trig.h>
 
-LineDetection::LineDetection() : points{
+Point LineDetection::points[48] = {
     {86.5, 0}, {85.63, -12.219}, {80.169, -18.904}, {71.206, -24.997},
     {64.174, -35.019}, {57.142, -45.062}, {50.110, -55.104}, {43.602, -65.388},
     {44.506, -74.275}, {33.562, -79.777}, {21.954, -83.689}, {9.912, -85.394},
@@ -16,7 +16,14 @@ LineDetection::LineDetection() : points{
     {2.326, 63.291}, {14.583, 63.379}, {26.052, 67.343}, {34.246, 76.291},
     {44.465, 74.207}, {43.602, 65.388}, {50.110, 55.104}, {57.142, 45.062},
     {64.174, 35.019}, {71.206, 24.977}, {80.169, 18.904}, {85.633, 12.219}
-} {
+};
+
+double LineDetection::magnitudes[48] = {};
+
+LineDetection::LineDetection() {
+    for (int i = 0; i < 48; i++) {
+        magnitudes[i] = Trig::getDist(points[i], {0,0});
+    }
     adc1.begin(cs1,mosi,miso,sck);
     adc2.begin(cs2,mosi,miso,sck);
     adc3.begin(cs3,mosi,miso,sck);
@@ -63,29 +70,50 @@ void LineDetection::updateLineSensors(bool withDebug) {
 double LineDetection::getLineAngle() {
     updateLineSensors(false); // Make true if you want to print out all line sensor values for GUI Debug
     
+    std::vector<int> pos;
     double xTotal = 0;
     double yTotal = 0;
     int count = 0;
     for(int i =0; i<48; i++) {
         if(activatedVals[i]==1) {
+            pos.push_back(i);
             xTotal += points[i].x;
             yTotal += points[i].y;
             count++;
         }
     }
-    
-    if(count > 0) {
-        xTotal /= count;
-        yTotal /= count;
-        
-        double angle = atan2(yTotal, xTotal);
 
-        angle *= 180/M_PI;
-        angle -= 90;
-        angle = (angle > 360) ? angle-360: angle;
-        angle = (angle<0) ? angle+360 : angle;
-        return angle;
-    } 
-    return -5;
+    xTotal /= count;
+    yTotal /= count;
+
+    if (count == 0) {
+        return -1;
+    }
+
+    int sensNum1 = -1;
+    int sensNum2 = -1;
+
+    int smallestDotProduct = 2;
+    for (int i = 0; i < pos.size(); i++) {
+        for (int j = i+1; j < pos.size(); j++) {
+            double dp = Trig::dotProduct(pos[i], pos[j]);
+            if (dp < smallestDotProduct) {
+                smallestDotProduct = dp;
+                sensNum1 = pos[i];
+                sensNum2 = pos[j];
+            }
+        }
+    }
+
+    double chordLength = Trig::getDist(points[sensNum1], points[sensNum2]);
+    double angle = atan2(yTotal, xTotal);
+
+    angle *= 180/M_PI;
+    angle -= 90;
+    angle = (angle > 360) ? angle-360: angle;
+    angle = (angle<0) ? angle+360 : angle;
+    return angle;
+
     
 }
+

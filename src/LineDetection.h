@@ -3,8 +3,6 @@
 
 #include <MCP3XXX.h>
 
-
-
 struct Point {
     double x;
     double y;
@@ -14,10 +12,11 @@ class LineDetection {
     public:
         LineDetection();
         double getLineAngle();
-        Point points[48];
+        static Point points[48];
         void updateLineSensors(bool withDebug);
         void lineSensorDebug();
         double sensorVals[48];
+        static double magnitudes[48];
         double calibrateVals[48];
         int activatedVals[48];
 

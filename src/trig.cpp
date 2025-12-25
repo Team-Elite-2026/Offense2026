@@ -29,3 +29,12 @@ double Trig::getDist(Point p1, Point p2) {
     return sqrt(pow((p1.y-p2.y),2) + pow((p1.x-p2.x),2));
 }
 
+double Trig::dotProduct(int sensNum1, int sensNum2) {
+    Point p1 = LineDetection::points[sensNum1];
+    Point p2 = LineDetection::points[sensNum1];
+    double x1 = p1.x / LineDetection::magnitudes[sensNum1];
+    double y1 = p1.y / LineDetection::magnitudes[sensNum1];
+    double x2 = p2.x / LineDetection::magnitudes[sensNum2];
+    double y2 = p2.y / LineDetection::magnitudes[sensNum2];
+    return (x1 * x2) + (y1* y2);
+}

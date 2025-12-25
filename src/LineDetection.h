@@ -15,7 +15,7 @@ class LineDetection {
         LineDetection();
         double getLineAngle();
         Point points[48];
-        void updateLineSensors();
+        void updateLineSensors(bool withDebug);
         void lineSensorDebug();
         double sensorVals[48];
         double calibrateVals[48];

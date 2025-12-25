@@ -18,18 +18,15 @@ void setup() {
     // calibration.calibrateCompassSensor();
 }
 
-void lineSensorTesting() {
-  // lineDetection.lineSensorDebug();
-  Serial.println("Line angle: " + String(lineDetection.getLineAngle()));
-}
+
 
 void loop() {
   if (switches.calibration()) {
     calibration.calibrateLineSensors();
-    Serial.println("Calibratign");
+    Serial.println("Calibrating");
   } else {
-  Serial.println("Testing Line Sensors");
-  lineSensorTesting();
+  // Serial.println("Testing Line Sensors");
+    Serial.println("Line angle: " + String(lineDetection.getLineAngle()));
   }
   // put your main code here, to run repeatedly:
 }

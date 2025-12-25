@@ -10,7 +10,7 @@ Calibration::Calibration(LineDetection& lineDetection, CompassSensor& compassSen
 
 
 void Calibration::calibrateLineSensors() {
-    lineDetection.updateLineSensors();
+    lineDetection.updateLineSensors(false);
     for (int i = 0; i < 48; i++) {
         lineDetection.calibrateVals[i] = fmax(lineDetection.calibrateVals[i],lineDetection.sensorVals[i] * 1.5);
     }

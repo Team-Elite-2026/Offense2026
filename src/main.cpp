@@ -26,7 +26,8 @@ void loop() {
     Serial.println("Calibrating");
   } else {
   // Serial.println("Testing Line Sensors");
-    Serial.println("Line angle: " + String(lineDetection.getLineAngle()));
+    lineDetection.Calculate();
+    Serial.println("Cord Length: " + String(lineDetection.getCordLength()));
   }
   // put your main code here, to run repeatedly:
 }

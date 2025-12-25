@@ -57,7 +57,7 @@ void LineDetection::updateLineSensors(bool withDebug) {
         if (withDebug)
             Serial.println("Sensor " + String(i+1) + ": " + String(sensorVals[i]));
 
-       if (sensorVals[i] > calibrateVals[i]) {
+       if (sensorVals[i] > calibrateVals[i]+30) {
             activatedVals[i] = 1;
         } else {
             activatedVals[i] = 0;
@@ -67,7 +67,7 @@ void LineDetection::updateLineSensors(bool withDebug) {
 
 
 
-double LineDetection::getLineAngle() {
+void LineDetection::Calculate() {
     updateLineSensors(false); // Make true if you want to print out all line sensor values for GUI Debug
     
     std::vector<int> pos;
@@ -83,37 +83,35 @@ double LineDetection::getLineAngle() {
         }
     }
 
-    xTotal /= count;
-    yTotal /= count;
+    if (count > 0) {
 
-    if (count == 0) {
-        return -1;
+        xTotal /= count;
+        yTotal /= count;
+
+        // Calculate Centroid Distance to Origin 
+        Point centroid;
+        Point origin;
+        centroid.x = xTotal;
+        centroid.y = yTotal;
+        origin.x = 0;
+        origin.y = 0;
+
+        cordLength = 1 - Trig::getDist(centroid, origin)/89.0; // Divide by the radius of the ideal circle
+        angle = atan2(yTotal, xTotal);
+
+        angle *= 180/M_PI;
+        angle -= 90;
+        angle = (angle > 360) ? angle-360: angle;
+        angle = (angle<0) ? angle+360 : angle;
+    } else {
+        angle = -5;
+        cordLength = -5;
     }
-
-    int sensNum1 = -1;
-    int sensNum2 = -1;
-
-    int smallestDotProduct = 2;
-    for (int i = 0; i < pos.size(); i++) {
-        for (int j = i+1; j < pos.size(); j++) {
-            double dp = Trig::dotProduct(pos[i], pos[j]);
-            if (dp < smallestDotProduct) {
-                smallestDotProduct = dp;
-                sensNum1 = pos[i];
-                sensNum2 = pos[j];
-            }
-        }
-    }
-
-    double chordLength = Trig::getDist(points[sensNum1], points[sensNum2]);
-    double angle = atan2(yTotal, xTotal);
-
-    angle *= 180/M_PI;
-    angle -= 90;
-    angle = (angle > 360) ? angle-360: angle;
-    angle = (angle<0) ? angle+360 : angle;
+}
+double LineDetection::getAngle() {
     return angle;
-
-    
 }
 
+double LineDetection::getCordLength() {
+    return cordLength;
+}

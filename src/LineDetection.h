@@ -11,7 +11,7 @@ struct Point {
 class LineDetection {
     public:
         LineDetection();
-        double getLineAngle();
+        void Calculate();
         static Point points[48];
         void updateLineSensors(bool withDebug);
         void lineSensorDebug();
@@ -19,8 +19,12 @@ class LineDetection {
         static double magnitudes[48];
         double calibrateVals[48];
         int activatedVals[48];
+        double getAngle();
+        double getCordLength();
 
     private:
+        double angle;
+        double cordLength;
         MCP3008 adc1;
         MCP3008 adc2;
         MCP3008 adc3;

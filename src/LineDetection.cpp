@@ -230,7 +230,7 @@ double LineDetection::getAngle() {
 double LineDetection::avoidanceAngle() {
     double diff = abs(prevAngle - angle);
     double circularDist = std::min(diff, 360.0 - diff);
-    if (circularDist > 150) {
+    if (circularDist > 150 && prevAngle != -5) {
         crossLine = !crossLine;
     }
     

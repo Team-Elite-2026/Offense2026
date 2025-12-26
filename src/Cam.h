@@ -23,6 +23,8 @@ public:
         std::string buffer;
         void ballNotFound(int ballX, int ballY, int robotX, int robotY);
         bool inIntake;
+        double ballAngle;
+        double ballDist;
 
 private:
         char read;

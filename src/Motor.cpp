@@ -3,8 +3,8 @@
 #include <math.h>
 
 Motor::Motor(int in1, int in2, int pwm) {
-    this->in1 = in1;
-    this->in2 = in2;
+    this->in2 = in1;
+    this->in1 = in2;
     this->pwmPin = pwm;
     this->speed = 0;
 }

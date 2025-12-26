@@ -81,7 +81,7 @@ void Movement::rotateToGoal(double goalDirection, double speedFactor) {
 }
 
 // Need to add orientation to the movement function
-void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation) {
+void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool correction) {
   intended_movement_angle -= 180;
 
   if (intended_movement_angle < 0) {
@@ -100,19 +100,22 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
     powerRR = powerRR / max_power;
     powerRL = powerRL / max_power;
 
-    double correction = findCorrection(desiredOrientation);
+    if (correction) {
+      double correction = findCorrection(desiredOrientation);
 
-    powerFR -= correction;
-    powerFL -= correction;
-    powerRR -= correction;
-    powerRL -= correction;
+      powerFR -= correction;
+      powerFL -= correction;
+      powerRR -= correction;
+      powerRL -= correction;
+      
+      max_power = fmax(fmax(abs(powerFR), abs(powerFL)), fmax(abs(powerRR), abs(powerRL)));
 
-    max_power = fmax(fmax(abs(powerFR), abs(powerFL)), fmax(abs(powerRR), abs(powerRL)));
+      powerFR = powerFR / max_power;
+      powerFL = powerFL / max_power;
+      powerRR = powerRR / max_power;
+      powerRL = powerRL / max_power;
+    }
 
-    powerFR = powerFR / max_power;
-    powerFL = powerFL / max_power;
-    powerRR = powerRR / max_power;
-    powerRL = powerRL / max_power;
 
     if (powerFL > 1) {
       powerFL = 1;

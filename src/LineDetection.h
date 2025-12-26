@@ -21,6 +21,7 @@ class LineDetection {
         int activatedVals[48];
         double getAngle();
         double getCordLength();
+        double avoidanceAngle();
 
     private:
         double angle;
@@ -43,6 +44,9 @@ class LineDetection {
         int miso = 12;
 
         MCP3008* adcList[6];
+
+        bool crossLine;
+        double prevAngle;
 };
 
 #endif 

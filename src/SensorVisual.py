@@ -4,16 +4,14 @@ import re
 import time
 
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import numpy as np
 
 # =========================
 # USER CONFIG
 # =========================
-SERIAL_PORT = "COM4"     # change as needed
+SERIAL_PORT = "/dev/cu.usbmodem172973501"     # change as needed
 BAUD_RATE = 115200
-MAX_SENSOR_VALUE = 1023
-UPDATE_RATE = 0.01
+UPDATE_RATE = 0.1
 
 # =========================
 # SENSOR COORDINATES
@@ -38,16 +36,14 @@ NUM_SENSORS = len(coords)
 # =========================
 # SHARED STATE
 # =========================
-sensor_values = np.zeros(NUM_SENSORS)
 centroid = np.array([0.0, 0.0])
-line_angle_deg = 0.0
+angle_to_line_deg = None
 
 lock = threading.Lock()
 
 # =========================
 # REGEX PATTERNS
 # =========================
-sensor_pattern = re.compile(r"Sensor\s+(\d+):\s+(\d+)")
 angle_pattern = re.compile(r"Line Angle:\s*([-+]?\d*\.?\d+)")
 centroid_pattern = re.compile(
     r"Centroid:\s*\(\s*([-+]?\d*\.?\d+)\s*,\s*([-+]?\d*\.?\d+)\s*\)"
@@ -57,7 +53,7 @@ centroid_pattern = re.compile(
 # SERIAL THREAD
 # =========================
 def serial_reader():
-    global line_angle_deg, centroid
+    global angle_to_line_deg, centroid
 
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
     print("Serial connected")
@@ -65,17 +61,14 @@ def serial_reader():
     while True:
         line = ser.readline().decode(errors="ignore").strip()
 
-        if m := sensor_pattern.match(line):
-            idx = int(m.group(1)) - 1
-            val = int(m.group(2))
-            if 0 <= idx < NUM_SENSORS:
-                with lock:
-                    sensor_values[idx] = val
-
-        elif m := angle_pattern.match(line):
+        if m := angle_pattern.match(line):
+            angle_val = float(m.group(1))
             with lock:
-                line_angle_deg = float(m.group(1))
-                # print(line_angle_deg)
+                # Use angle directly from C++ (already calculated there)
+                if angle_val == -5:
+                    angle_to_line_deg = None
+                else:
+                    angle_to_line_deg = angle_val
 
         elif m := centroid_pattern.match(line):
             with lock:
@@ -88,19 +81,15 @@ def serial_reader():
 plt.ion()
 fig, ax = plt.subplots(figsize=(7, 7))
 
-sc = ax.scatter(
-    coords[:, 0],
-    coords[:, 1],
-    c=sensor_values,
-    cmap="inferno",
-    s=120,
-    norm=colors.Normalize(vmin=0, vmax=MAX_SENSOR_VALUE)
-)
+# Show sensor positions as gray dots (static)
+ax.scatter(coords[:, 0], coords[:, 1], c='gray', s=50, alpha=0.3, label="Sensor Positions")
 
 centroid_plot, = ax.plot(0, 0, "ro", markersize=8, label="Centroid")
 line_plot, = ax.plot([], [], "g-", linewidth=2, label="Line Angle")
 
-plt.colorbar(sc, label="Sensor Value")
+# Text for displaying angle to line intersection
+angle_text = ax.text(-95, -95, "", fontsize=12, color="white", 
+                     bbox=dict(boxstyle="round,pad=0.5", facecolor="black", alpha=0.7))
 
 ax.set_aspect("equal")
 ax.set_title("Live Line Sensor + Line Angle Visualization")
@@ -124,26 +113,33 @@ threading.Thread(target=serial_reader, daemon=True).start()
 # =========================
 while True:
     with lock:
-        sc.set_array(sensor_values)
-        sc.set_sizes(50 + (sensor_values / MAX_SENSOR_VALUE) * 300)
-
         # Update centroid
         centroid_plot.set_data([centroid[0]], [centroid[1]])
 
-        # Draw line only if valid
-        if line_angle_deg != -5:
-            angle_rad = np.deg2rad(line_angle_deg)
-            dx = np.cos(angle_rad)
-            dy = np.sin(angle_rad)
-
-            t = np.array([-limit, limit])
-
+        # Use angle directly from C++ (already calculated there)
+        if angle_to_line_deg is not None:
+            # Draw line based on the angle from C++
+            # The angle represents direction from robot to line intersection
+            # Convert angle to radians and draw line through centroid
+            angle_rad = np.deg2rad(angle_to_line_deg)
+            
+            # Calculate line direction (perpendicular to the angle direction)
+            # If angle is direction TO line, line is perpendicular to that
+            line_angle_rad = angle_rad + np.pi/2  # Perpendicular
+            
+            dx = np.cos(line_angle_rad)
+            dy = np.sin(line_angle_rad)
+            
+            # Extend line across plot limits
+            t = np.array([-limit * 2, limit * 2])
             x_line = centroid[0] + dx * t
             y_line = centroid[1] + dy * t
-
+            
             line_plot.set_data(x_line, y_line)
+            angle_text.set_text(f"Angle to line: {angle_to_line_deg:.2f}°")
         else:
-            # Hide line
+            # Hide line if no angle detected
             line_plot.set_data([], [])
+            angle_text.set_text("Angle to line: N/A")
 
     plt.pause(UPDATE_RATE)

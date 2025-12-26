@@ -27,7 +27,7 @@ void loop() {
   } else {
   // Serial.println("Testing Line Sensors");
     lineDetection.Calculate();
-    Serial.println("Cord Length: " + String(lineDetection.getCordLength()));
+    Serial.println("Line Angle: " + String(lineDetection.getAngle()));
   }
   // put your main code here, to run repeatedly:
 }

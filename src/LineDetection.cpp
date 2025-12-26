@@ -68,7 +68,7 @@ void LineDetection::updateLineSensors(bool withDebug) {
 
 
 void LineDetection::Calculate() {
-    updateLineSensors(false); // Make true if you want to print out all line sensor values for GUI Debug
+    updateLineSensors(true); // Make true if you want to print out all line sensor values for GUI Debug
     
     std::vector<int> pos;
     double xTotal = 0;
@@ -97,10 +97,10 @@ void LineDetection::Calculate() {
         origin.y = 0;
 
         cordLength = 1 - Trig::getDist(centroid, origin)/89.0; // Divide by the radius of the ideal circle
-        angle = atan2(yTotal, xTotal);
-
+        angle = atan2(xTotal, yTotal);
+        Serial.println("Centroid: (" + String(centroid.x) + ", " + String(centroid.y) + ")");
         angle *= 180/M_PI;
-        angle -= 90;
+        // angle -= 90;
         angle = (angle > 360) ? angle-360: angle;
         angle = (angle<0) ? angle+360 : angle;
     } else {

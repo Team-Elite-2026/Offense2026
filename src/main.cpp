@@ -4,7 +4,8 @@
 #include <Switches.h>
 #include <Callibration.h>
 #include <Movement.h>
-
+#include <orbit.h>
+#include <Cam.h>
 
 double pincontrolRLA = 22;
 double pincontrolRLB = 23;
@@ -28,17 +29,20 @@ Motor FR(pincontrolFRA, pincontrolFRB, pinspeedFR);
 Motor BL(pincontrolRLA, pincontrolRLB, pinspeedRL);
 Motor BR(pincontrolRRA, pincontrolRRB, pinspeedRR);
 Movement movement(FL, FR, BL, BR, compassSensor);
+Orbit orbit(1);
+Cam camera;
 
 void setup() {
   // put your setup code here, to run once:
   
   Serial.begin(9600);
+  Serial2.begin(2000000);
   compassSensor.begin();
-  compassSensor.callibrate();
+  // compassSensor.callibrate();
 }
 
 void testingCompass() {
-    movement.movement(0,0.15,0, true);
+    movement.movement(0,0.15,0);
     Serial.println(compassSensor.currentOffset());
 }
 
@@ -47,20 +51,33 @@ void loop() {
     calibration.calibrateLineSensors();
     calibration.calibrateCompassSensor();
     Serial.println("Calibrating");
-  } else if (!switches.start()) {
-    movement.stop();
   }
   else {
   // Serial.println("Testing Line Sensors");
     lineDetection.Calculate();
-    double angle = lineDetection.getAngle();
-    Serial.println("Line Angle: " + String(angle));
-    if (angle == -5) {
-      movement.stop();
+    camera.CamCalc();
+    double lineAngle = lineDetection.getAngle();
+    double robotAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
+    Serial.println("Line Angle: " + String(lineAngle));
+    Serial.println("Robot Angle: " + String(robotAngle));
+    if (lineAngle == -5) {
+      if (switches.start()){
+        if(switches.lightgate())
+          movement.movement(0,0.2,0);
+        else if(camera.ballAngle != -5)
+          movement.movement(robotAngle,0.2,0);
+        else
+          movement.stop();
+      }
+      else
+        movement.stop();
     } else {
       double avoidanceAngle = lineDetection.avoidanceAngle();
       Serial.println("Avoidance angle: " + String(avoidanceAngle));
-      movement.movement(avoidanceAngle,0.15,0, true);
+      if (switches.start())
+        movement.movement(avoidanceAngle,0.2,0);
+      else
+        movement.stop();
     }
 
   }

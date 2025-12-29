@@ -7,10 +7,10 @@
 using namespace std;
 Cam::Cam()
 {
-  ball = -5;
+  ballAngle = -5;
   yellowGoal = -5;
   blueGoal = -5;
-  ballDistance = -5;
+  ballDist = -5;
   buffer = "";
 }
 double Cam::CamCalc()
@@ -40,7 +40,6 @@ double Cam::CamCalc()
       else if (read == 'c')
       {
         blueGoal = strtod(buffer.c_str(), NULL);
-        blueGoal = FilterAngle(blueGoal, previousBallAngle);
         buffer = "";
         Serial.print("blue: ");
         Serial.println(blueGoal);
@@ -48,7 +47,6 @@ double Cam::CamCalc()
       else if (read == 'd')
       {
         yellowGoal = strtod(buffer.c_str(), NULL);
-        yellowGoal = FilterAngle(yellowGoal, previousYellowAngle);
         Serial.print("yellow: ");
         Serial.println(yellowGoal);
         buffer = "";

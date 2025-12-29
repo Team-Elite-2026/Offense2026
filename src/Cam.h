@@ -12,19 +12,14 @@ class Cam
 {
 public:
         Cam();
-        double ball;
         double yellowGoal;
         double blueGoal;
-        double ballDistance;
-        double derivative;
-        int sampleTime;
-        double CamCalc();
-        double FilterAngle(double angle, double validAngle);
-        std::string buffer;
-        void ballNotFound(int ballX, int ballY, int robotX, int robotY);
-        bool inIntake;
         double ballAngle;
         double ballDist;
+        double CamCalc();
+        std::string buffer;
+        bool inIntake;
+
 
 private:
         char read;

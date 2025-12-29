@@ -11,12 +11,14 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
 
     myPID2 = new PID(&Input2, &Output2, &Setpoint2, kp2, ki2, kd2, REVERSE);
     myPID2->SetMode(AUTOMATIC);
+    myPID->SetOutputLimits(0, 100);
+    myPID->SetSampleTime(2);
 }
 
 double Movement::findCorrection(double goalDirection) {
   double correction = 0;
   double orientationDiff = compassSensor.currentOffset() - goalDirection;
-
+  
   Serial.println("Orientation Diff: " + String(orientationDiff));
 
   Input = abs(orientationDiff);
@@ -43,8 +45,8 @@ double Movement::goalCorrection(double goalDirection) {
   double correction = 0;
   double orientationDiff = compassSensor.currentOffset() - goalDirection;
 
-  Input2 = abs(orientationDiff);
-  myPID2->Compute();
+  Input = abs(orientationDiff);
+  myPID->Compute();
 
   if (abs(orientationDiff) < 7) {
     correction = 0;
@@ -81,13 +83,15 @@ void Movement::rotateToGoal(double goalDirection, double speedFactor) {
 }
 
 // Need to add orientation to the movement function
-void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool correction) {
+void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation) {
   intended_movement_angle -= 180;
 
   if (intended_movement_angle < 0) {
     intended_movement_angle += 360;
   }
+
   
+
     double powerFR = Trig::Sin(intended_movement_angle - 55);
     double powerRR = Trig::Sin(intended_movement_angle - 125);
     double powerRL = Trig::Sin(intended_movement_angle - 235);
@@ -100,21 +104,21 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
     powerRR = powerRR / max_power;
     powerRL = powerRL / max_power;
 
-    if (correction) {
-      double correction = findCorrection(desiredOrientation);
+    Serial.println("Before Finding Correction");
+    double correction = findCorrection(desiredOrientation);
 
-      powerFR -= correction;
-      powerFL -= correction;
-      powerRR -= correction;
-      powerRL -= correction;
-      
-      max_power = fmax(fmax(abs(powerFR), abs(powerFL)), fmax(abs(powerRR), abs(powerRL)));
+    powerFR -= correction;
+    powerFL -= correction;
+    powerRR -= correction;
+    powerRL -= correction;
+    
+    max_power = fmax(fmax(abs(powerFR), abs(powerFL)), fmax(abs(powerRR), abs(powerRL)));
 
-      powerFR = powerFR / max_power;
-      powerFL = powerFL / max_power;
-      powerRR = powerRR / max_power;
-      powerRL = powerRL / max_power;
-    }
+    powerFR = powerFR / max_power;
+    powerFL = powerFL / max_power;
+    powerRR = powerRR / max_power;
+    powerRL = powerRL / max_power;
+  
 
 
     if (powerFL > 1) {

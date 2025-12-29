@@ -20,7 +20,7 @@ private:
     double Setpoint, Input, Output;
     double Setpoint2, Input2, Output2;
 
-    double kp = 0.2;
+    double kp = 0.9;
     double ki = 0;
     double kd = 0.000005;
 
@@ -31,7 +31,7 @@ private:
 
 public:
     Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor);
-    void movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool correction);
+    void movement(double intended_movement_angle, double speedfactor, double desiredOrientation);
     double findCorrection(double goalDirection);
     double CorrectionAngle();
     double goalCorrection(double goalDirection);

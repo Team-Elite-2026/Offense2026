@@ -27,6 +27,11 @@ private:
     double kp2 = 0.12;
     double ki2 = 0;
     double kd2 = 0.005;
+    int kickerHold = 1000;
+    elapsedMillis timer;
+    elapsedMillis active;
+    int kickerPin = 30;
+    int kickHold = 1000;
 
 
 public:
@@ -38,6 +43,9 @@ public:
     void rotateToGoal(double goalDirection, double speedFactor);
     void circle();
     void stop();
+    void kick();
+    void kickBackground();
+    
     
 
 };

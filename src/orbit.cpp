@@ -25,11 +25,12 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance)
 
 
     if(physicalRobot == 1){ // Offense
-        orbitValue = min(90, 16 * exp(0.033 * newballAngle));
+        orbitValue = min(90, 2*M_PI * exp(0.05 * newballAngle));
     }
     else{ 
         orbitValue = min(90, 8 * exp(0.033 * newballAngle));
     }
+
     double outputSum = orbitValue * dampenVal;
 
     // Serial.print("Orbit val before: ");

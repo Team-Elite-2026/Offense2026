@@ -13,6 +13,7 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
     myPID2->SetMode(AUTOMATIC);
     myPID->SetOutputLimits(0, 100);
     myPID->SetSampleTime(2);
+    pinMode(kickerPin, OUTPUT);
 }
 
 double Movement::findCorrection(double goalDirection) {
@@ -24,7 +25,7 @@ double Movement::findCorrection(double goalDirection) {
   Input = abs(orientationDiff);
   myPID->Compute();
 
-  if (abs(orientationDiff) < 7) {
+  if (abs(orientationDiff) < 5) {
     correction = 0;
   } if (orientationDiff > 90) {
     correction = -1;
@@ -45,8 +46,8 @@ double Movement::goalCorrection(double goalDirection) {
   double correction = 0;
   double orientationDiff = compassSensor.currentOffset() - goalDirection;
 
-  Input = abs(orientationDiff);
-  myPID->Compute();
+  Input2 = abs(orientationDiff);
+  myPID2->Compute();
 
   if (abs(orientationDiff) < 7) {
     correction = 0;
@@ -157,6 +158,29 @@ void Movement::circle() {
     this->FRMotor.setSpeed(0.2);
     this->BLMotor.setSpeed(0.2);
     this->BRMotor.setSpeed(0.2);
+}
+
+void Movement::kick() {
+    if (timer > (kickHold + 2000))
+    {
+        timer = 0;
+    }
+    if (timer <= kickHold)
+    {
+        digitalWrite(kickerPin, HIGH);
+    }
+    else
+    {
+        digitalWrite(kickerPin, LOW);
+    }
+    active = 0;
+}
+void Movement::kickBackground()
+{
+    if (active > 2 && timer > kickHold)
+    {
+        digitalWrite(kickerPin, LOW);
+    }
 }
 
 void Movement::stop() {

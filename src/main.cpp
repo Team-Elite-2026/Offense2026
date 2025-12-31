@@ -60,10 +60,14 @@ void loop() {
     double robotAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
     Serial.println("Line Angle: " + String(lineAngle));
     Serial.println("Robot Angle: " + String(robotAngle));
+    Serial.println("Ball Angle: " + String(camera.ballAngle));
+    movement.kickBackground();
     if (lineAngle == -5) {
       if (switches.start()){
-        if(switches.lightgate())
+        if(switches.lightgate()) {
           movement.movement(0,0.2,0);
+          movement.kick();
+        }
         else if(camera.ballAngle != -5)
           movement.movement(robotAngle,0.2,0);
         else

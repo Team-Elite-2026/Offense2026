@@ -40,6 +40,9 @@ double Cam::CamCalc()
       else if (read == 'c')
       {
         blueGoal = strtod(buffer.c_str(), NULL);
+        if (blueGoal > 180) {
+          blueGoal -= 360;
+        }
         buffer = "";
         Serial.print("blue: ");
         Serial.println(blueGoal);
@@ -47,6 +50,9 @@ double Cam::CamCalc()
       else if (read == 'd')
       {
         yellowGoal = strtod(buffer.c_str(), NULL);
+        if (yellowGoal > 180) {
+          yellowGoal -= 360;
+        }
         Serial.print("yellow: ");
         Serial.println(yellowGoal);
         buffer = "";

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <trig.h>
 #include <switches.h>
+#include <map>
 
 class Cam
 {
@@ -19,7 +20,6 @@ public:
         double CamCalc();
         std::string buffer;
         bool inIntake;
-
 
 private:
         char read;

@@ -32,13 +32,17 @@ Movement movement(FL, FR, BL, BR, compassSensor);
 Orbit orbit(1);
 Cam camera;
 
+double lineAngle;
+double robotAngle;
+double goalAngle;
+
 void setup() {
   // put your setup code here, to run once:
   
   Serial.begin(9600);
   Serial2.begin(2000000);
   compassSensor.begin();
-  // compassSensor.callibrate();
+  compassSensor.callibrate();
 }
 
 void testingCompass() {
@@ -56,20 +60,29 @@ void loop() {
   // Serial.println("Testing Line Sensors");
     lineDetection.Calculate();
     camera.CamCalc();
-    double lineAngle = lineDetection.getAngle();
-    double robotAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
+    lineAngle = lineDetection.getAngle();
+    robotAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
+    if (switches.goalSide()) {
+      Serial.println("blue goal");
+      goalAngle = camera.blueGoal;
+    }
+    else {
+      Serial.println("yellow goal");
+      goalAngle = camera.yellowGoal;
+    }
     Serial.println("Line Angle: " + String(lineAngle));
     Serial.println("Robot Angle: " + String(robotAngle));
     Serial.println("Ball Angle: " + String(camera.ballAngle));
+    Serial.println("Goal Angle: " + String(goalAngle));
     movement.kickBackground();
     if (lineAngle == -5) {
       if (switches.start()){
         if(switches.lightgate()) {
-          movement.movement(0,0.2,0);
+          movement.movement(0,0.2,goalAngle);
           movement.kick();
         }
         else if(camera.ballAngle != -5)
-          movement.movement(robotAngle,0.2,0);
+          movement.movement(robotAngle,0.2,goalAngle);
         else
           movement.stop();
       }
@@ -79,7 +92,7 @@ void loop() {
       double avoidanceAngle = lineDetection.avoidanceAngle();
       Serial.println("Avoidance angle: " + String(avoidanceAngle));
       if (switches.start())
-        movement.movement(avoidanceAngle,0.2,0);
+        movement.movement(avoidanceAngle,0.2,goalAngle);
       else
         movement.stop();
     }

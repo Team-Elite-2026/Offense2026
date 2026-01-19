@@ -20,13 +20,10 @@ private:
     double Setpoint, Input, Output;
     double Setpoint2, Input2, Output2;
 
-    double kp = 0.9;
+    double kp = 0.3;
     double ki = 0;
     double kd = 0.000005;
 
-    double kp2 = 0.12;
-    double ki2 = 0;
-    double kd2 = 0.005;
     int kickerHold = 1000;
     elapsedMillis timer;
     elapsedMillis active;

@@ -7,7 +7,7 @@ class Switch
 public:
     Switch();
     bool start();
-    bool switchSide();
+    bool goalSide();
     bool kickoff();
     bool calibration();
     bool lightgate();

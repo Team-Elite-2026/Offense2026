@@ -20,9 +20,9 @@ bool Switch::start()
     }
     return false;
 }
-bool Switch::switchSide()
+bool Switch::goalSide()
 {
-    if (digitalRead(38) == HIGH)
+    if (digitalRead(38) == HIGH) // this means blue goal is selected
     {
         return true;
     }

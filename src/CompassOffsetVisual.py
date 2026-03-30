@@ -11,6 +11,7 @@ import serial
 offset_values = deque()
 time_values = deque()
 data_lock = threading.Lock()
+last_match_time = None
 
 
 def parse_args():
@@ -39,6 +40,7 @@ def parse_args():
 
 
 def serial_reader(port, baud, window_seconds):
+    global last_match_time
     # Supports lines like:
     #  - "12" (integer-only line)
     #  - "Offset: 12"
@@ -69,6 +71,7 @@ def serial_reader(port, baud, window_seconds):
         with data_lock:
             time_values.append(t)
             offset_values.append(offset)
+            last_match_time = t
 
             cutoff = t - window_seconds
             while time_values and time_values[0] < cutoff:
@@ -82,6 +85,15 @@ def main():
     plt.ion()
     fig, ax = plt.subplots(figsize=(10, 5))
     line, = ax.plot([], [], linewidth=2, color="tab:blue", label="Current Offset")
+    status_text = ax.text(
+        0.02,
+        0.95,
+        "",
+        transform=ax.transAxes,
+        va="top",
+        fontsize=10,
+        color="tab:red",
+    )
     ax.axhline(0, linestyle="--", linewidth=1, color="tab:gray", label="Target (0)")
     ax.set_title("Compass Offset vs Time")
     ax.set_xlabel("Time (s)")
@@ -100,6 +112,7 @@ def main():
         with data_lock:
             x = list(time_values)
             y = list(offset_values)
+            local_last_match_time = last_match_time
 
         if x:
             line.set_data(x, y)
@@ -109,6 +122,12 @@ def main():
                 y_max = min(190, max(y) + 10)
                 if y_min < y_max:
                     ax.set_ylim(y_min, y_max)
+            status_text.set_text("")
+        else:
+            status_text.set_text("No offset data received yet.\nCheck COM port, baud, and firmware Serial output.")
+
+        if x and local_last_match_time is not None and (x[-1] - local_last_match_time) > 1.0:
+            status_text.set_text("Offset data stream paused.")
 
         plt.pause(args.refresh)
 

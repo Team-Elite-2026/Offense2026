@@ -70,6 +70,7 @@ void loop() {
       Serial.println("yellow goal");
       goalAngle = camera.yellowGoal;
     }
+    Serial.println("Offset: " + String(compassSensor.currentOffset()));
     Serial.println("Line Angle: " + String(lineAngle));
     Serial.println("Robot Angle: " + String(robotAngle));
     Serial.println("Ball Angle: " + String(camera.ballAngle));

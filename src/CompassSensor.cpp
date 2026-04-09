@@ -1,5 +1,6 @@
 #include <CompassSensor.h>
 #include <Wire.h>
+#include <trig.h>
 
 CompassSensor::CompassSensor() {
     
@@ -29,38 +30,42 @@ void CompassSensor::callibrate() {
     }
 }
 
+// returns a value between 0 and 360
 int CompassSensor::getOrientation() {
     bno.getEvent(&event);
     return event.orientation.x;
 }
 
 // range between -180 and 180
+// this returns the offset between the current orientation and the zeroed angle
 int CompassSensor::currentOffset() {
   int offset = getOrientation() - this->zeroedAngle;
   // Serial.println("Current Orientation: " + String(getOrientation()));
   // Serial.println("Zeroed Angle: " + String(this->zeroedAngle));
   // Serial.println("Calculated offset: - Orientation Diff: " + String(offset));
 
-  if (offset < -180) {
-    return offset + 360; 
-  } else if (offset > 180) {
-    return offset - 360; 
-  } else {
-    return offset; 
-  }
+  return Trig::wrapAngle(offset);
 
+}
+
+// goalAngle is field-relative from zeroed heading (0 = zeroed angle).
+// Returns signed heading error in [-180, 180] as (current - target).
+int CompassSensor::currentFieldRelativeOffset(double goalAngle) {
+  int currentOrientation = getOrientation();
+  double targetOrientation = this->zeroedAngle + goalAngle;
+  double offset = currentOrientation - targetOrientation;
+
+  return static_cast<int>(Trig::wrapAngle(offset));
 }
 
 int CompassSensor::currentOffset(double goalAngle) {
-  int currentOrientation = getOrientation();
-  int offset = currentOrientation - (this->zeroedAngle + goalAngle);
-
-  if (offset < -180) {
-    return offset + 360; 
-  } else if (offset > 180) {
-    return offset - 360; 
-  } else {
-    return offset; 
-  }
+  return currentFieldRelativeOffset(goalAngle);
 }
 
+// Converts a robot-relative target to a field-relative heading target.
+// Assumes matching sign convention between relative angles and compass heading.
+double CompassSensor::robotRelativeToField(double robotRelativeAngle) {
+  double currentFieldHeading = currentOffset();
+  double normalizedRelative = Trig::wrapAngle(robotRelativeAngle); // prob dont need this but j in case
+  return Trig::wrapAngle(currentFieldHeading + normalizedRelative);
+}

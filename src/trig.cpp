@@ -38,3 +38,9 @@ double Trig::dotProduct(int sensNum1, int sensNum2) {
     double y2 = p2.y / LineDetection::magnitudes[sensNum2];
     return (x1 * x2) + (y1* y2);
 }
+
+double Trig::wrapAngle(double angle) {
+    if (angle < -180) angle += 360;
+    if (angle >   180) angle -= 360;
+    return angle;
+}

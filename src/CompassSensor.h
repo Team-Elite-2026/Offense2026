@@ -12,6 +12,8 @@ class CompassSensor {
     int currentOffset();
     int getOrientation();
     int currentOffset(double goalAngle);
+    int currentFieldRelativeOffset(double goalAngle);
+    double robotRelativeToField(double robotRelativeAngle);
     double zeroedAngle;
 
     private:

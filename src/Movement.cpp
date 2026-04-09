@@ -16,7 +16,7 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
 
 double Movement::findCorrection(double goalDirection) {
   double correction = 0;
-  double orientationDiff = compassSensor.currentOffset() - goalDirection;
+  double orientationDiff = compassSensor.currentFieldRelativeOffset(goalDirection);
   
   Serial.println("Orientation Diff: " + String(orientationDiff));
 

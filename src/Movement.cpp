@@ -16,9 +16,34 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
 
 double Movement::findCorrection(double goalDirection) {
   double correction = 0;
-  double orientationDiff = compassSensor.currentFieldRelativeOffset(goalDirection);
+  double orientationDiff = compassSensor.currentOffset() - goalDirection;
   
-  Serial.println("Orientation Diff: " + String(orientationDiff));
+  Serial.println("Orientation Diff For Zero: " + String(orientationDiff));
+
+  Input = abs(orientationDiff);
+  myPID->Compute();
+
+  if (abs(orientationDiff) < 5) {
+    correction = 0;
+  } if (orientationDiff > 90) {
+    correction = -1;
+  } else if (orientationDiff < -90) {
+    correction = 1;
+  } else if (orientationDiff > 0) {
+    correction = -1 * (Output / 100);
+  } else if (orientationDiff < 0) {
+    correction = (Output / 100);
+  }
+
+  // Serial.println("Correction: " + String(correction));
+
+  return correction;
+}
+double Movement::findCorrectionForGoal(double goalDirection) { // Makes the oritentation Diff the goal angle bc goal angle is already relative to the robot direction
+  double correction = 0;
+  double orientationDiff = goalDirection;
+  
+  Serial.println("Orientation Diff For Goal: " + String(orientationDiff));
 
   Input = abs(orientationDiff);
   myPID->Compute();
@@ -41,7 +66,7 @@ double Movement::findCorrection(double goalDirection) {
 }
 
 // Need to add orientation to the movement function
-void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation) {
+void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool AimingGoal) {
   intended_movement_angle -= 180;
 
   if (intended_movement_angle < 0) {
@@ -61,7 +86,11 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
   powerRL = powerRL / max_power;
 
   Serial.println("Before Finding Correction");
-  double correction = findCorrection(desiredOrientation);
+  double correction;
+  if(!AimingGoal)
+    correction = findCorrection(desiredOrientation);
+  else
+    correction = -1 * findCorrectionForGoal(desiredOrientation);
 
   powerFR -= correction;
   powerFL -= correction;

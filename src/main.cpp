@@ -36,6 +36,7 @@ double lineAngle;
 double robotAngle;
 double goalAngle;
 double goalDesiredFieldAngle;
+bool aimingGoal;
 
 void setup() {
   // put your setup code here, to run once:
@@ -43,11 +44,11 @@ void setup() {
   Serial.begin(9600);
   Serial2.begin(2000000);
   compassSensor.begin();
-  compassSensor.callibrate();
+  // compassSensor.callibrate();
 }
 
 void testingCompass() {
-    movement.movement(0,0.15,0);
+    movement.movement(0,0.15,0, false);
     Serial.println(compassSensor.currentOffset());
 }
 
@@ -74,12 +75,14 @@ void loop() {
 
     // Camera goal angles are robot-relative. Convert to field-relative for heading PID.
     if (goalAngle == -5) {
-      goalDesiredFieldAngle = compassSensor.currentOffset();
+      goalDesiredFieldAngle = 0;
+      aimingGoal = false;
     } else {
-      goalDesiredFieldAngle = compassSensor.robotRelativeToField(goalAngle);
+      goalDesiredFieldAngle = goalAngle;
+      aimingGoal = true;
     }
 
-    Serial.println("Offset: " + String(compassSensor.currentOffset()));
+    // Serial.println("Offset: " + String(compassSensor.currentOffset()));
     Serial.println("Line Angle: " + String(lineAngle));
     Serial.println("Robot Angle: " + String(robotAngle));
     Serial.println("Ball Angle: " + String(camera.ballAngle));
@@ -88,14 +91,14 @@ void loop() {
     if (lineAngle == -5) {
       if (switches.start()){
         if(switches.lightgate()) {
-          movement.movement(0,0.2,goalDesiredFieldAngle); // wanna kick the ball to the goal
+          movement.movement(0,0.2,goalDesiredFieldAngle, aimingGoal); // wanna kick the ball to the goal
           if (abs(compassSensor.currentOffset() - goalDesiredFieldAngle) < 5) { // if close to goal angle, kick
             movement.kick();
           }
           movement.kick();
         }
         else if(camera.ballAngle != -5)
-          movement.movement(robotAngle,0.2,ballAngle); // wanna try to face ball to get into dribbler
+          movement.movement(robotAngle,0.2,goalDesiredFieldAngle, aimingGoal); // wanna try to face ball to get into dribbler
         else
           movement.stop();
       }
@@ -105,7 +108,7 @@ void loop() {
       double avoidanceAngle = lineDetection.avoidanceAngle();
       Serial.println("Avoidance angle: " + String(avoidanceAngle));
       if (switches.start())
-        movement.movement(avoidanceAngle,0.2,0); // dont wanna turn to goal angle while avoiding line
+        movement.movement(avoidanceAngle,0.2,0, aimingGoal); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
       else
         movement.stop();
     }

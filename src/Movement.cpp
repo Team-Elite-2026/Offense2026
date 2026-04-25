@@ -8,6 +8,9 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
 {
     myPID = new PID(&Input, &Output, &Setpoint, kp, ki, kd, REVERSE);
     myPID->SetMode(AUTOMATIC);
+    
+    myPID2 = new PID(&Input2, &Output2, &Setpoint2, kp2, ki2, kd2, REVERSE);
+    myPID2->SetMode(AUTOMATIC);
 
     myPID->SetOutputLimits(0, 100);
     myPID->SetSampleTime(2);
@@ -172,4 +175,30 @@ void Movement::stop() {
     this->FRMotor.setSpeed(0);
     this->BLMotor.setSpeed(0);
     this->BRMotor.setSpeed(0);
+}
+
+
+void Movement::rotateToGoal(double goalDirection, double speedFactor)
+{
+  // Match findCorrectionForGoal + the negation used in movement(..., AimingGoal true)
+  double err = Trig::wrapAngle(goalDirection);
+  Input = std::fabs(err);
+  myPID2->Compute();
+  double c = 0.0;
+
+  if (err > 90) {
+    c = -1.0;
+  } else if (err < -90) {
+    c = 1.0;
+  } else if (err > 0) {
+    c = -1.0 * (Output / 100.0);
+  } else {
+    c = (Output / 100.0);
+  }
+  double spin = -c;
+  double s = speedFactor;
+  FLMotor.setSpeed(s * (-spin));
+  FRMotor.setSpeed(s * spin);
+  BLMotor.setSpeed(s * (-spin));
+  BRMotor.setSpeed(s * spin);
 }

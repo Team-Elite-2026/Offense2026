@@ -180,7 +180,7 @@ void runDefense()
     Serial.println("Defense Avoidance Angle: " + String(avoidance));
     if (switches.start())
     {
-      movement.movement(avoidance, kDefenseSpeed, 0, false);
+      movement.rotateToGoal(lineAngle - 180, kDefenseSpeed);
     }
     else
     {

@@ -38,10 +38,6 @@ public:
     double findCorrectionForGoal(double goalDirection);
     double CorrectionAngle();
     double goalCorrection(double goalDirection);
-    /** In-place turn: add delta (deg) to current compass offset (same frame as currentOffset / zeroed heading). */
-    void rotateByRobotRelative(double relativeDeltaDeg, double speedFactor);
-    /** In-place turn toward a field / zeroed-frame heading (deg), [-180, 180] style. Uses PID. */
-    void rotateToFieldHeading(double fieldHeadingDeg, double speedFactor);
     void rotateToGoal(double goalDirection, double speedFactor);
     void circle();
     void stop();

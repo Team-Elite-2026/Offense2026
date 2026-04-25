@@ -1,17 +1,7 @@
 #include <Movement.h>
 #include <math.h>
-#include <cmath>
-#include <cstdlib>
 #include <trig.h>
 
-namespace
-{
-  /** Shortest turn error: current - goal, wrapped to [-180, 180] */
-  double fieldHeadingError(CompassSensor& compass, double fieldGoal)
-  {
-    return Trig::wrapAngle((double)compass.currentOffset() - fieldGoal);
-  }
-}
 
 Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor)
     : FLMotor(FLMotor), FRMotor(FRMotor), BLMotor(BLMotor), BRMotor(BRMotor), compassSensor(compassSensor)
@@ -145,75 +135,6 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
   this->FRMotor.setSpeed(speedfactor * powerFR);
   this->BLMotor.setSpeed(speedfactor * powerRL);
   this->BRMotor.setSpeed(speedfactor * powerRR);
-}
-
-/** Same PID + piecewise logic as findCorrection, but for in-place spin (no Serial). */
-static double fieldHeadingPidSpin(CompassSensor& compass, PID* myPID, double& input, double& output, double fieldGoal)
-{
-  double err = fieldHeadingError(compass, fieldGoal);
-  input = std::fabs(err);
-  myPID->Compute();
-  if (std::fabs(err) < 5) {
-    return 0.0;
-  }
-  if (err > 90) {
-    return -1.0;
-  } else if (err < -90) {
-    return 1.0;
-  } else if (err > 0) {
-    return -1.0 * (output / 100.0);
-  } else {
-    return (output / 100.0);
-  }
-}
-
-void Movement::rotateToFieldHeading(double fieldHeadingDeg, double speedFactor)
-{
-  double spin = fieldHeadingPidSpin(compassSensor, myPID, Input, Output, fieldHeadingDeg);
-  if (std::fabs(spin) < 1e-6) {
-    stop();
-    return;
-  }
-  // Mecanum in-place spin (tune sign if robot turns the wrong way)
-  double s = speedFactor;
-  FLMotor.setSpeed(s * (-spin));
-  FRMotor.setSpeed(s * spin);
-  BLMotor.setSpeed(s * (-spin));
-  BRMotor.setSpeed(s * spin);
-}
-
-void Movement::rotateByRobotRelative(double relativeDeltaDeg, double speedFactor)
-{
-  double target = Trig::wrapAngle(compassSensor.currentOffset() + relativeDeltaDeg);
-  rotateToFieldHeading(target, speedFactor);
-}
-
-void Movement::rotateToGoal(double goalDirection, double speedFactor)
-{
-  // Match findCorrectionForGoal + the negation used in movement(..., AimingGoal true)
-  double err = Trig::wrapAngle(goalDirection);
-  Input = std::fabs(err);
-  myPID->Compute();
-  double c = 0.0;
-  if (std::fabs(err) < 5) {
-    stop();
-    return;
-  }
-  if (err > 90) {
-    c = -1.0;
-  } else if (err < -90) {
-    c = 1.0;
-  } else if (err > 0) {
-    c = -1.0 * (Output / 100.0);
-  } else {
-    c = (Output / 100.0);
-  }
-  double spin = -c;
-  double s = speedFactor;
-  FLMotor.setSpeed(s * (-spin));
-  FRMotor.setSpeed(s * spin);
-  BLMotor.setSpeed(s * (-spin));
-  BRMotor.setSpeed(s * spin);
 }
 
 void Movement::circle() {

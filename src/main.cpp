@@ -7,6 +7,7 @@
 #include <orbit.h>
 #include <Cam.h>
 #include <Defense.h>
+#include <trig.h>
 
 double pincontrolRLA = 22;
 double pincontrolRLB = 23;
@@ -176,11 +177,11 @@ void runDefense()
 
   if (lineAngle != -5 && lineDetection.getCordLength() > 0.3)
   {
-    double avoidance = lineDetection.avoidanceAngle();
-    Serial.println("Defense Avoidance Angle: " + String(avoidance));
+    double lineRotateTarget = Trig::wrapAngle(lineAngle - 180.0);
+    Serial.println("Defense line rotate target: " + String(lineRotateTarget));
     if (switches.start())
     {
-      movement.movement(avoidance, kDefenseSpeed, 0, false);
+      movement.rotateToFieldHeading(lineRotateTarget, kDefenseSpeed);
     }
     else
     {

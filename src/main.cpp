@@ -49,6 +49,14 @@ double goalAngle;
 double goalDesiredFieldAngle;
 bool aimingGoal;
 
+void setup()
+{
+  Serial.begin(9600);
+  Serial2.begin(2000000);
+  compassSensor.begin();
+  compassSensor.callibrate();
+}
+
 double getHomeGoalAngle()
 {
   if (switches.goalSide())
@@ -211,14 +219,6 @@ void runDefense()
   }
 
   movement.movement(defenseMoveAngle, kDefenseSpeed, 0, false);
-}
-
-void setup()
-{
-  Serial.begin(9600);
-  Serial2.begin(2000000);
-  compassSensor.begin();
-  // compassSensor.callibrate();
 }
 
 void loop()

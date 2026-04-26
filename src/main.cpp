@@ -223,12 +223,14 @@ void runDefense()
 
 void loop()
 {
-  if (kRobotMode == RobotMode::Offense)
-  {
-    runOffense();
-  }
-  else
-  {
-    runDefense();
-  }
+  // if (kRobotMode == RobotMode::Offense)
+  // {
+  //   runOffense();
+  // }
+  // else
+  // {
+  //   runDefense();
+  // }
+
+  movement.rotateToGoal(90, 0.2);
 }

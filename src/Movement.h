@@ -24,9 +24,9 @@ private:
     double ki = 0;
     double kd = 0.000005;
     // For rotateToGoal
-    double kp2 = 1;
-    double ki2 = 0;
-    double kd2 = 0.000005;
+    double kp2 = 30;
+    double ki2 = 0.0001;
+    double kd2 = 0.00005;
 
     int kickerHold = 1000;
     elapsedMillis timer;

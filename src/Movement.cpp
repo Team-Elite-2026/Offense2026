@@ -181,24 +181,26 @@ void Movement::stop() {
 void Movement::rotateToGoal(double goalDirection, double speedFactor)
 {
   // Match findCorrectionForGoal + the negation used in movement(..., AimingGoal true)
-  double err = Trig::wrapAngle(goalDirection);
-  Input = std::fabs(err);
+  double err = goalDirection;
+  Input2 = std::fabs(err);
+
   myPID2->Compute();
   double c = 0.0;
 
-  if (err > 90) {
-    c = -1.0;
-  } else if (err < -90) {
-    c = 1.0;
+  if (err > 25) {
+    c = 255;
+  } else if (err < -25) {
+    c = -255;
   } else if (err > 0) {
-    c = -1.0 * (Output / 100.0);
-  } else {
     c = (Output / 100.0);
+  } else {
+    c = -1.0 * (Output / 100.0);
   }
-  double spin = -c;
   double s = speedFactor;
-  FLMotor.setSpeed(s * (-spin));
-  FRMotor.setSpeed(s * spin);
-  BLMotor.setSpeed(s * (-spin));
-  BRMotor.setSpeed(s * spin);
+
+  Serial.println(s * c);
+  FLMotor.setSpeed(s * (-c));
+  FRMotor.setSpeed(s * c);
+  BLMotor.setSpeed(s * (-c));
+  BRMotor.setSpeed(s * c);
 }

@@ -7,6 +7,7 @@
 #include <orbit.h>
 #include <Cam.h>
 #include <Defense.h>
+#include <trig.h>
 
 double pincontrolRLA = 22;
 double pincontrolRLB = 23;
@@ -167,7 +168,13 @@ void runDefense()
   lineDetection.Calculate();
   camera.CamCalc();
   lineAngle = lineDetection.getAngle();
-  maxChordLength = lineDetection.getChordLengthFurthestPairNormalized()
+  maxChordLength = lineDetection.getChordLengthFurthestPairNormalized();
+  if (lineAngle != -5)
+  {
+    // Updates crossLine side memory based on angle wrap jumps.
+    lineDetection.avoidanceAngle();
+  }
+  bool crossLineState = lineDetection.getCrossLine();
 
   double homeGoalAngle = getHomeGoalAngle();
   movement.kickBackground();
@@ -175,7 +182,8 @@ void runDefense()
   Serial.println("Line Angle: " + String(lineAngle));
   Serial.println("Ball Angle: " + String(camera.ballAngle));
   Serial.println("Home Goal Angle: " + String(homeGoalAngle));
-  Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength))
+  Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
+  Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
 
   if (!switches.start())
   {
@@ -198,7 +206,10 @@ void runDefense()
   double defenseMoveAngle = defense.defenseCalc(
       camera.ballAngle,
       homeGoalAngle,
-      compassSensor.currentOffset());
+      compassSensor.currentOffset(),
+      lineAngle,
+      maxChordLength,
+      crossLineState);
 
   if (defenseMoveAngle < 0)
   {
@@ -206,19 +217,29 @@ void runDefense()
     return;
   }
 
-  movement.movement(defenseMoveAngle, defenseSpeedFactor, lineAngle-180, false);
+  double desiredPerpendicularHeading = 0.0;
+  if (lineAngle != -5)
+  {
+    // Choose the line-normal direction (lineAngle or opposite) that requires
+    // less instantaneous turning, then convert robot-relative to field-relative
+    // for Movement::findCorrectionRelZero().
+    double relNormalA = Trig::wrapAngle(lineAngle);
+    double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
+    double chosenRelativeNormal = (fabs(relNormalA) <= fabs(relNormalB)) ? relNormalA : relNormalB;
+    desiredPerpendicularHeading = compassSensor.robotRelativeToField(chosenRelativeNormal);
+  }
+
+  movement.movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
 void loop()
 {
-  // if (kRobotMode == RobotMode::Offense)
-  // {
-  //   runOffense();
-  // }
-  // else
-  // {
-  //   runDefense();
-  // }
-
-  movement.rotateToGoal(90, 0.2);
+  if (kRobotMode == RobotMode::Offense)
+  {
+    runOffense();
+  }
+  else
+  {
+    runDefense();
+  }
 }

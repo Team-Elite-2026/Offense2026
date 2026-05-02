@@ -21,7 +21,7 @@ Point LineDetection::points[48] = {
 
 double LineDetection::magnitudes[48] = {};
 
-LineDetection::LineDetection() {
+LineDetection::LineDetection() : angle(-5), cordLength(-5), crossLine(false), prevAngle(-5) {
     for (int i = 0; i < 48; i++) {
         magnitudes[i] = Trig::getDist(points[i], {0,0});
     }
@@ -252,6 +252,11 @@ double LineDetection::avoidanceAngle() {
     double newAngle = angle + 180;
     return (newAngle > 360) ? (newAngle - 360) : (newAngle);
 }
+
+bool LineDetection::getCrossLine() const {
+    return crossLine;
+}
+
 double LineDetection::getCordLength() {
     return cordLength;
 }

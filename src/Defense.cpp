@@ -30,35 +30,62 @@ double Defense::angularDistance(double a, double b)
     return fabs(normalize180(a - b));
 }
 
-double Defense::projectAngle(double lineReferenceAngle, double movementAngle)
+double Defense::projectAngle(double lineNormalAngle, double movementAngle)
 {
-    double lineAngle = normalize360(lineReferenceAngle + 180.0);
-    if (angularDistance(movementAngle, lineAngle) > 90.0)
+    double tangentPlus = normalize360(lineNormalAngle + 90.0);
+    double tangentMinus = normalize360(lineNormalAngle - 90.0);
+
+    if (angularDistance(movementAngle, tangentPlus) <= angularDistance(movementAngle, tangentMinus))
     {
-        return normalize360(movementAngle);
+        return tangentPlus;
     }
-
-    double tangentAngle = normalize360(lineReferenceAngle + 90.0);
-    double vectorX = Trig::Sin(tangentAngle);
-    double vectorY = Trig::Cos(tangentAngle);
-    double moveX = Trig::Sin(movementAngle);
-    double moveY = Trig::Cos(movementAngle);
-
-    double denominator = (vectorX * vectorX) + (vectorY * vectorY);
-    if (denominator < 1e-6)
-    {
-        return normalize360(movementAngle);
-    }
-
-    double dot = ((moveX * vectorX) + (moveY * vectorY)) / denominator;
-    double projectedX = dot * vectorX;
-    double projectedY = dot * vectorY;
-
-    double projectedAngle = Trig::toDegrees(atan2(projectedX, projectedY));
-    return normalize360(projectedAngle);
+    return tangentMinus;
 }
 
-double Defense::defenseCalc(double ballAngle, double homeGoalAngle, double headingCorrection)
+double Defense::clamp01(double value)
+{
+    if (value < 0.0)
+    {
+        return 0.0;
+    }
+    if (value > 1.0)
+    {
+        return 1.0;
+    }
+    return value;
+}
+
+double Defense::blendTangentWithNormal(double tangentAngle,
+                                       double lineNormalAngle,
+                                       double chordLengthNormalized,
+                                       bool crossLine)
+{
+    double chord = clamp01(chordLengthNormalized);
+
+    // Close to a full chord means the robot is already centered on the line:
+    // keep motion almost purely tangent in this case.
+    double normalGain = (chord >= 0.92) ? 0.0 : (0.65 * (1.0 - chord));
+
+    // Opposite of avoidanceAngle(): if crossLine is true, normal correction points
+    // to lineNormal+180; otherwise it points to lineNormal.
+    double lineCorrectionAngle = crossLine ? normalize360(lineNormalAngle + 180.0) : normalize360(lineNormalAngle);
+    double blendedX = Trig::Sin(tangentAngle) + (normalGain * Trig::Sin(lineCorrectionAngle));
+    double blendedY = Trig::Cos(tangentAngle) + (normalGain * Trig::Cos(lineCorrectionAngle));
+
+    if ((blendedX * blendedX + blendedY * blendedY) < 1e-6)
+    {
+        return normalize360(tangentAngle);
+    }
+
+    return normalize360(Trig::toDegrees(atan2(blendedX, blendedY)));
+}
+
+double Defense::defenseCalc(double ballAngle,
+                            double homeGoalAngle,
+                            double headingCorrection,
+                            double lineNormalAngle,
+                            double chordLengthNormalized,
+                            bool crossLine)
 {
     double ball = normalize360(ballAngle);
     double goal = normalize360(homeGoalAngle);
@@ -95,8 +122,15 @@ double Defense::defenseCalc(double ballAngle, double homeGoalAngle, double headi
     double robotAngleY = Trig::Cos(ball) + Trig::Cos(goal);
     defenseAngle = normalize360(Trig::toDegrees(atan2(robotAngleX, robotAngleY)));
 
-    double updatedHorizontal = normalize360(180.0 - headingCorrection);
-    defenseAngle = projectAngle(updatedHorizontal, defenseAngle);
+    if (lineNormalAngle < 0.0)
+    {
+        Serial.print("defense Angle (no line): ");
+        Serial.println(defenseAngle);
+        return defenseAngle;
+    }
+
+    double tangentAngle = projectAngle(lineNormalAngle, defenseAngle);
+    defenseAngle = blendTangentWithNormal(tangentAngle, lineNormalAngle, chordLengthNormalized, crossLine);
 
     Serial.print("defense Angle: ");
     Serial.println(defenseAngle);

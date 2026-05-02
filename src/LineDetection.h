@@ -21,6 +21,7 @@ class LineDetection {
         int activatedVals[48];
         double getAngle();
         double avoidanceAngle();
+        bool getCrossLine() const;
         double getCordLength();
         double getChordLengthFurthestPairNormalized(); // largest distance between two activated sensors [0,1]
 

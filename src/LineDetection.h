@@ -22,12 +22,8 @@ class LineDetection {
         double getAngle();
         double avoidanceAngle();
         bool getCrossLine() const;
-        static double desiredPerpendicularHeadingFromLine(double lineAngleDeg);
         double getCordLength();
         double getChordLengthFurthestPairNormalized(); // largest distance between two activated sensors [0,1]
-
-        static constexpr double kLineRecoveryChordThreshold = 0.4;
-        static constexpr double kLineRecoveryFrontHalfAngleDeg = 15.0;
 
     private:
         double angle;

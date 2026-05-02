@@ -257,16 +257,6 @@ bool LineDetection::getCrossLine() const {
     return crossLine;
 }
 
-double LineDetection::desiredPerpendicularHeadingFromLine(double lineAngleDeg) {
-    if (lineAngleDeg == -5) {
-        return 0.0;
-    }
-
-    double relNormalA = Trig::wrapAngle(lineAngleDeg);
-    double relNormalB = Trig::wrapAngle(lineAngleDeg + 180.0);
-    return (fabs(relNormalA) <= fabs(relNormalB)) ? relNormalA : relNormalB;
-}
-
 double LineDetection::getCordLength() {
     return cordLength;
 }

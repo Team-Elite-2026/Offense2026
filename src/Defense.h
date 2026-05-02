@@ -6,7 +6,6 @@
 class Defense {
 public:
     Defense();
-    static bool shouldForceForwardLineRecovery(double lineAngleDeg, double chordLengthNorm);
     double defenseCalc(double ballAngle,
                        double homeGoalAngle,
                        double headingCorrection,

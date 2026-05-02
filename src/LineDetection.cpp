@@ -25,6 +25,15 @@ LineDetection::LineDetection() {
     for (int i = 0; i < 48; i++) {
         magnitudes[i] = Trig::getDist(points[i], {0,0});
     }
+    maxSensorPairDistance = 0.0;
+    for (int i = 0; i < 48; ++i) {
+        for (int j = i + 1; j < 48; ++j) {
+            double d = Trig::getDist(points[i], points[j]);
+            if (d > maxSensorPairDistance) {
+                maxSensorPairDistance = d;
+            }
+        }
+    }
     adc1.begin(cs1,mosi,miso,sck);
     adc2.begin(cs2,mosi,miso,sck);
     adc3.begin(cs3,mosi,miso,sck);
@@ -245,4 +254,38 @@ double LineDetection::avoidanceAngle() {
 }
 double LineDetection::getCordLength() {
     return cordLength;
+}
+
+double LineDetection::getChordLengthFurthestPairNormalized() {
+    int idx[48];
+    int k = 0;
+    for (int i = 0; i < 48; ++i) {
+        if (activatedVals[i] == 1) {
+            idx[k++] = i;
+        }
+    }
+    if (k < 2) {
+        return -5.0;
+    }
+
+    double maxD2 = 0.0;
+    for (int i = 0; i < k; ++i) {
+        const Point& pi = points[idx[i]];
+        for (int j = i + 1; j < k; ++j) {
+            const Point& pj = points[idx[j]];
+            double dx = pi.x - pj.x;
+            double dy = pi.y - pj.y;
+            double d2 = dx * dx + dy * dy;
+            if (d2 > maxD2) {
+                maxD2 = d2;
+            }
+        }
+    }
+
+    double furthest = sqrt(maxD2);
+    double n = furthest / maxSensorPairDistance;
+    if (n > 1.0) {
+        n = 1.0;
+    }
+    return n;
 }

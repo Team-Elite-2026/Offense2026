@@ -17,7 +17,7 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
     pinMode(kickerPin, OUTPUT);
 }
 
-double Movement::findCorrection(double goalDirection) {
+double Movement::findCorrectionRelZero(double goalDirection) {
   double correction = 0;
   double orientationDiff = compassSensor.currentOffset() - goalDirection;
   
@@ -42,7 +42,7 @@ double Movement::findCorrection(double goalDirection) {
 
   return correction;
 }
-double Movement::findCorrectionForGoal(double goalDirection) { // Makes the oritentation Diff the goal angle bc goal angle is already relative to the robot direction
+double Movement::findCorrectionRelOffset(double goalDirection) { // Makes the oritentation Diff the goal angle bc goal angle is already relative to the robot direction
   double correction = 0;
   double orientationDiff = goalDirection;
   
@@ -91,9 +91,9 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
   Serial.println("Before Finding Correction");
   double correction;
   if(!AimingGoal)
-    correction = findCorrection(desiredOrientation);
+    correction = findCorrectionRelZero(desiredOrientation);
   else
-    correction = -1 * findCorrectionForGoal(desiredOrientation);
+    correction = -1 * findCorrectionRelOffset(desiredOrientation);
 
   powerFR -= correction;
   powerFL -= correction;
@@ -180,7 +180,7 @@ void Movement::stop() {
 
 void Movement::rotateToGoal(double goalDirection, double speedFactor)
 {
-  // Match findCorrectionForGoal + the negation used in movement(..., AimingGoal true)
+  // Match findCorrectionRelOffset + the negation used in movement(..., AimingGoal true)
   double err = goalDirection;
   Input2 = std::fabs(err);
 

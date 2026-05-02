@@ -38,8 +38,8 @@ private:
 public:
     Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor);
     void movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool AimingGoal);
-    double findCorrection(double goalDirection);
-    double findCorrectionForGoal(double goalDirection);
+    double findCorrectionRelZero(double goalDirection);
+    double findCorrectionRelOffset(double goalDirection);
     double CorrectionAngle();
     double goalCorrection(double goalDirection);
     void rotateToGoal(double goalDirection, double speedFactor);

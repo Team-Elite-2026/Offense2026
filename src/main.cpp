@@ -40,13 +40,16 @@ enum class RobotMode
   Defense
 };
 
-constexpr RobotMode kRobotMode = RobotMode::Defense;
-constexpr double kDefenseSpeed = 0.2;
+RobotMode kRobotMode = RobotMode::Defense;
+double defenseSpeedFactor = 0.2;
+double offenseSpeedFactor = 0.2;
+
+
 
 double lineAngle;
-double robotAngle;
+double orbitAngle;
+double maxChordLength;
 double goalAngle;
-double goalDesiredFieldAngle;
 bool aimingGoal;
 
 void setup()
@@ -80,7 +83,7 @@ void runOffense()
     lineDetection.Calculate();
     camera.CamCalc();
     lineAngle = lineDetection.getAngle();
-    robotAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
+    orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
     if (switches.goalSide())
     {
       Serial.println("blue goal");
@@ -92,21 +95,18 @@ void runOffense()
       goalAngle = camera.yellowGoal;
     }
 
-    // Camera goal angles are robot-relative. Convert to field-relative for heading PID.
     if (goalAngle == -5)
     {
-      goalDesiredFieldAngle = 0;
       aimingGoal = false;
     }
     else
     {
-      goalDesiredFieldAngle = goalAngle;
       aimingGoal = true;
     }
 
     // Serial.println("Offset: " + String(compassSensor.currentOffset()));
     Serial.println("Line Angle: " + String(lineAngle));
-    Serial.println("Robot Angle: " + String(robotAngle));
+    Serial.println("Robot Angle: " + String(orbitAngle));
     Serial.println("Ball Angle: " + String(camera.ballAngle));
     Serial.println("Goal Angle: " + String(goalAngle));
     movement.kickBackground();
@@ -116,16 +116,17 @@ void runOffense()
       {
         if (switches.lightgate())
         {
-          movement.movement(0, 0.2, goalDesiredFieldAngle, aimingGoal); // wanna kick the ball to the goal
-          if (abs(compassSensor.currentOffset() - goalDesiredFieldAngle) < 5)
+          // movement.movement(0, 0.2, goalDesiredFieldAngle, aimingGoal); 
+          movement.rotateToGoal(-goalAngle, 0.2);
+          if (fabs(goalAngle) < 5)
           { // if close to goal angle, kick
-            movement.kick();
+            movement.kick(); // wanna kick the ball to the goal
           }
-          movement.kick();
         }
         else if (camera.ballAngle != -5)
         {
-          movement.movement(robotAngle, 0.2, goalDesiredFieldAngle, aimingGoal); // wanna try to face ball to get into dribbler
+          // movement.movement(ballAngle, offenseSpeedFactor, camera.ballAngle, false); // wanna try to face dir of ball to get into dribbler so no trying to aim to the goal
+          movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal); // j using default orbit aiming towards the goal if seen
         }
         else
         {
@@ -143,7 +144,7 @@ void runOffense()
       Serial.println("Avoidance angle: " + String(avoidanceAngle));
       if (switches.start())
       {
-        movement.movement(avoidanceAngle, 0.2, 0, aimingGoal); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
+        movement.movement(avoidanceAngle, offenseSpeedFactor, 0, false); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
       }
       else
       {
@@ -166,6 +167,7 @@ void runDefense()
   lineDetection.Calculate();
   camera.CamCalc();
   lineAngle = lineDetection.getAngle();
+  maxChordLength = lineDetection.getChordLengthFurthestPairNormalized()
 
   double homeGoalAngle = getHomeGoalAngle();
   movement.kickBackground();
@@ -173,21 +175,7 @@ void runDefense()
   Serial.println("Line Angle: " + String(lineAngle));
   Serial.println("Ball Angle: " + String(camera.ballAngle));
   Serial.println("Home Goal Angle: " + String(homeGoalAngle));
-
-  if (lineAngle != -5 && lineDetection.getCordLength() > 0.3)
-  {
-    double avoidance = lineDetection.avoidanceAngle();
-    Serial.println("Defense Avoidance Angle: " + String(avoidance));
-    if (switches.start())
-    {
-      movement.rotateToGoal(lineAngle - 180, kDefenseSpeed);
-    }
-    else
-    {
-      movement.stop();
-    }
-    return;
-  }
+  Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength))
 
   if (!switches.start())
   {
@@ -203,7 +191,7 @@ void runDefense()
 
   if (homeGoalAngle == -5)
   {
-    movement.movement(camera.ballAngle, kDefenseSpeed, 0, false);
+    movement.movement(camera.ballAngle, defenseSpeedFactor, 0, false);
     return;
   }
 
@@ -218,7 +206,7 @@ void runDefense()
     return;
   }
 
-  movement.movement(defenseMoveAngle, kDefenseSpeed, 0, false);
+  movement.movement(defenseMoveAngle, defenseSpeedFactor, lineAngle-180, false);
 }
 
 void loop()

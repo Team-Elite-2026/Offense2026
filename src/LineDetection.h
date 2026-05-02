@@ -20,12 +20,15 @@ class LineDetection {
         double calibrateVals[48];
         int activatedVals[48];
         double getAngle();
-        double getCordLength();
         double avoidanceAngle();
+        double getCordLength();
+        double getChordLengthFurthestPairNormalized(); // largest distance between two activated sensors [0,1]
 
     private:
         double angle;
         double cordLength;
+        /** Precomputed max distance between any two points[i], points[j] on the ring layout. */
+        double maxSensorPairDistance;
         MCP3008 adc1;
         MCP3008 adc2;
         MCP3008 adc3;

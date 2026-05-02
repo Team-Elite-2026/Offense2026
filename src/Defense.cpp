@@ -1,9 +1,22 @@
 #include <Defense.h>
 
 #include <math.h>
+#include <LineDetection.h>
 #include <trig.h>
 
 Defense::Defense() : defenseAngle(-1) {}
+
+bool Defense::shouldForceForwardLineRecovery(double lineAngleDeg, double chordLengthNorm)
+{
+    if (lineAngleDeg == -5 || chordLengthNorm < 0.0)
+    {
+        return false;
+    }
+
+    double frontOffset = fabs(Trig::wrapAngle(lineAngleDeg));
+    return chordLengthNorm < LineDetection::kLineRecoveryChordThreshold &&
+           frontOffset <= LineDetection::kLineRecoveryFrontHalfAngleDeg;
+}
 
 double Defense::normalize360(double angle)
 {

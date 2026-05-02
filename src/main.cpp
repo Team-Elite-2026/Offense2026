@@ -191,6 +191,20 @@ void runDefense()
     return;
   }
 
+  double desiredPerpendicularHeading = 0.0;
+  if (lineAngle != -5)
+  {
+    double chosenRelativeNormal = LineDetection::desiredPerpendicularHeadingFromLine(lineAngle);
+    desiredPerpendicularHeading = compassSensor.robotRelativeToField(chosenRelativeNormal);
+  }
+
+  if (Defense::shouldForceForwardLineRecovery(lineAngle, maxChordLength))
+  {
+    Serial.println("Line recovery override: FORWARD");
+    movement.movement(0, defenseSpeedFactor, desiredPerpendicularHeading, false);
+    return;
+  }
+
   if (camera.ballAngle == -5)
   {
     movement.stop();
@@ -215,18 +229,6 @@ void runDefense()
   {
     movement.stop();
     return;
-  }
-
-  double desiredPerpendicularHeading = 0.0;
-  if (lineAngle != -5)
-  {
-    // Choose the line-normal direction (lineAngle or opposite) that requires
-    // less instantaneous turning, then convert robot-relative to field-relative
-    // for Movement::findCorrectionRelZero().
-    double relNormalA = Trig::wrapAngle(lineAngle);
-    double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
-    double chosenRelativeNormal = (fabs(relNormalA) <= fabs(relNormalB)) ? relNormalA : relNormalB;
-    desiredPerpendicularHeading = compassSensor.robotRelativeToField(chosenRelativeNormal);
   }
 
   movement.movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);

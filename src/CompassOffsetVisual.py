@@ -12,6 +12,7 @@ offset_values = deque()
 time_values = deque()
 data_lock = threading.Lock()
 last_match_time = None
+new_data_event = threading.Event()
 
 
 def parse_args():
@@ -24,6 +25,12 @@ def parse_args():
         help="Serial port (example: /dev/cu.usbmodem172973501 or COM3)",
     )
     parser.add_argument("--baud", type=int, default=9600, help="Serial baud rate")
+    parser.add_argument(
+        "--serial-timeout",
+        type=float,
+        default=0.02,
+        help="Serial read timeout in seconds (lower = more responsive)",
+    )
     parser.add_argument(
         "--window",
         type=float,
@@ -39,7 +46,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def serial_reader(port, baud, window_seconds):
+def serial_reader(port, baud, window_seconds, serial_timeout):
     global last_match_time
     # Supports lines like:
     #  - "12" (integer-only line)
@@ -48,7 +55,8 @@ def serial_reader(port, baud, window_seconds):
     labeled_pattern = re.compile(r"offset[^-\d]*(-?\d+)", re.IGNORECASE)
     integer_only_pattern = re.compile(r"^\s*(-?\d+)\s*$")
 
-    ser = serial.Serial(port, baud, timeout=1)
+    ser = serial.Serial(port, baud, timeout=serial_timeout)
+    ser.reset_input_buffer()
     start_time = time.monotonic()
     print(f"Connected to {port} @ {baud}")
 
@@ -56,6 +64,12 @@ def serial_reader(port, baud, window_seconds):
         raw = ser.readline().decode(errors="ignore").strip()
         if not raw:
             continue
+
+        # If plot/render can't keep up, discard stale backlog and keep only newest line.
+        while ser.in_waiting > 0:
+            newer = ser.readline().decode(errors="ignore").strip()
+            if newer:
+                raw = newer
 
         labeled_match = labeled_pattern.search(raw)
         integer_match = integer_only_pattern.match(raw)
@@ -72,6 +86,7 @@ def serial_reader(port, baud, window_seconds):
             time_values.append(t)
             offset_values.append(offset)
             last_match_time = t
+            new_data_event.set()
 
             cutoff = t - window_seconds
             while time_values and time_values[0] < cutoff:
@@ -104,11 +119,16 @@ def main():
 
     threading.Thread(
         target=serial_reader,
-        args=(args.port, args.baud, args.window),
+        args=(args.port, args.baud, args.window, args.serial_timeout),
         daemon=True,
     ).start()
 
+    session_start_time = time.monotonic()
     while True:
+        # Wake on new data; timeout keeps UI responsive if stream pauses.
+        new_data_event.wait(timeout=args.refresh)
+        new_data_event.clear()
+
         with data_lock:
             x = list(time_values)
             y = list(offset_values)
@@ -126,10 +146,13 @@ def main():
         else:
             status_text.set_text("No offset data received yet.\nCheck COM port, baud, and firmware Serial output.")
 
-        if x and local_last_match_time is not None and (x[-1] - local_last_match_time) > 1.0:
+        now_relative = time.monotonic() - session_start_time
+        if local_last_match_time is not None and (now_relative - local_last_match_time) > 1.0:
             status_text.set_text("Offset data stream paused.")
 
-        plt.pause(args.refresh)
+        fig.canvas.draw_idle()
+        fig.canvas.flush_events()
+        plt.pause(0.001)
 
 
 if __name__ == "__main__":

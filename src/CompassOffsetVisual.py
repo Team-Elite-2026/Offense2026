@@ -52,7 +52,7 @@ def serial_reader(port, baud, window_seconds, serial_timeout):
     #  - "Line Angle: 123.4"
     #  - "line angle = 270"
     line_angle_pattern = re.compile(
-        r"line\s*angle[^-\d]*(-?\d+(?:\.\d+)?)",
+        r"Line Angle:\s*([0-9]+(?:\.[0-9]+)?)",
         re.IGNORECASE,
     )
 
@@ -72,7 +72,7 @@ def serial_reader(port, baud, window_seconds, serial_timeout):
             if newer:
                 raw = newer
 
-        line_angle_match = line_angle_pattern.search(raw)
+        line_angle_match = line_angle_pattern.group(raw)
         if not line_angle_match:
             continue
         line_angle = float(line_angle_match.group(1))

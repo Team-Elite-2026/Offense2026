@@ -8,9 +8,6 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
 {
     myPID = new PID(&Input, &Output, &Setpoint, kp, ki, kd, REVERSE);
     myPID->SetMode(AUTOMATIC);
-    
-    myPID2 = new PID(&Input2, &Output2, &Setpoint2, kp2, ki2, kd2, REVERSE);
-    myPID2->SetMode(AUTOMATIC);
 
     myPID->SetOutputLimits(0, 100);
     myPID->SetSampleTime(2);

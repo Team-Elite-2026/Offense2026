@@ -42,15 +42,12 @@ enum class RobotMode
 };
 
 RobotMode kRobotMode = RobotMode::Defense;
-double defenseSpeedFactor = 0.2;
+double defenseSpeedFactor = 0.3;
 double offenseSpeedFactor = 0.2;
 
 
 
-double lineAngle;
-double orbitAngle;
-double maxChordLength;
-double goalAngle;
+double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
 bool aimingGoal;
 
 void setup()
@@ -172,18 +169,22 @@ void runDefense()
   if (lineAngle != -5)
   {
     // Updates crossLine side memory based on angle wrap jumps.
-    lineDetection.avoidanceAngle();
+    avoidanceAngle = lineDetection.avoidanceAngle();
+    Serial.println("Avoidance Angle: " + String(avoidanceAngle));
   }
   bool crossLineState = lineDetection.getCrossLine();
 
   double homeGoalAngle = getHomeGoalAngle();
   movement.kickBackground();
 
+  currentOffset = compassSensor.currentOffset();
+
   Serial.println("Line Angle: " + String(lineAngle));
   Serial.println("Ball Angle: " + String(camera.ballAngle));
   Serial.println("Home Goal Angle: " + String(homeGoalAngle));
   Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
   Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
+  Serial.println("Current offset: " + String(currentOffset));
 
   if (!switches.start())
   {
@@ -206,10 +207,12 @@ void runDefense()
   double defenseMoveAngle = defense.defenseCalc(
       camera.ballAngle,
       homeGoalAngle,
-      compassSensor.currentOffset(),
+      currentOffset,
       lineAngle,
       maxChordLength,
       crossLineState);
+
+  Serial.println("Defense Move angle: " + String(defenseMoveAngle));
 
   if (defenseMoveAngle < 0)
   {
@@ -218,18 +221,40 @@ void runDefense()
   }
 
   double desiredPerpendicularHeading = 0.0;
+  bool desiredHeadingInBadZone = false;
   if (lineAngle != -5)
   {
-    // Choose the line-normal direction (lineAngle or opposite) that requires
-    // less instantaneous turning, then convert robot-relative to field-relative
-    // for Movement::findCorrectionRelZero().
+    const double badZoneHeadingLimit = 55.0;
     double relNormalA = Trig::wrapAngle(lineAngle);
     double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
-    double chosenRelativeNormal = (fabs(relNormalA) <= fabs(relNormalB)) ? relNormalA : relNormalB;
-    desiredPerpendicularHeading = compassSensor.robotRelativeToField(chosenRelativeNormal);
+    double fieldNormalA = compassSensor.robotRelativeToField(relNormalA);
+    double fieldNormalB = compassSensor.robotRelativeToField(relNormalB);
+    bool normalAInBadZone = fabs(fieldNormalA) > badZoneHeadingLimit;
+    bool normalBInBadZone = fabs(fieldNormalB) > badZoneHeadingLimit;
+
+    if (normalAInBadZone != normalBInBadZone)
+    {
+      desiredPerpendicularHeading = normalAInBadZone ? fieldNormalB : fieldNormalA;
+    }
+    else
+    {
+      double chosenRelativeNormal = (fabs(relNormalA) <= fabs(relNormalB)) ? relNormalA : relNormalB;
+      desiredPerpendicularHeading = compassSensor.robotRelativeToField(chosenRelativeNormal);
+    }
+
+    desiredHeadingInBadZone = fabs(desiredPerpendicularHeading) > badZoneHeadingLimit;
+    Serial.println("Field Relative Desired Heading: " + String(desiredPerpendicularHeading));
+  }
+
+  if (desiredHeadingInBadZone) {
+    Serial.println("YOU ARE APPROACHING A BAD ZONE");
+    movement.stop();
+    return;
   }
 
   movement.movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
+
+  Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
 }
 
 void loop()
@@ -242,4 +267,9 @@ void loop()
   {
     runDefense();
   }
+
+  for (int i = 0; i < 10; i++) {
+    Serial.println();
+  }
+
 }

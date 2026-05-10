@@ -131,20 +131,20 @@ double Defense::defenseCalc(double ballAngle,
     }
 
     double tangentAngle = projectAngle(lineNormalAngle, defenseAngle);
-    bool sidewaysHeading = fabs(fabs(normalize180(headingCorrection)) - 90.0) <= sidewaysHeadingTolerance;
+    // bool sidewaysHeading = fabs(fabs(normalize180(headingCorrection)) - 70.0) <= sidewaysHeadingTolerance;
 
-    if (sidewaysHeading)
-    {
-        if (lastTangentAngle < 0.0)
-        {
-            lastTangentAngle = tangentAngle;
-        }
-        tangentAngle = normalize360(lastTangentAngle + 180.0);
-    }
-    else
-    {
-        lastTangentAngle = tangentAngle;
-    }
+    // if (sidewaysHeading)
+    // {
+    //     if (lastTangentAngle < 0.0)
+    //     {
+    //         lastTangentAngle = tangentAngle;
+    //     }
+    //     tangentAngle = normalize360(lastTangentAngle + 180.0);
+    // }
+    // else
+    // {
+    //     lastTangentAngle = tangentAngle;
+    // }
 
     defenseAngle = blendTangentWithNormal(tangentAngle, lineNormalAngle, chordLengthNormalized, crossLine);
 

@@ -65,7 +65,5 @@ int CompassSensor::currentOffset(double goalAngle) {
 // Converts a robot-relative target to a field-relative heading target.
 // Assumes matching sign convention between relative angles and compass heading.
 double CompassSensor::robotRelativeToField(double robotRelativeAngle) {
-  double currentFieldHeading = currentOffset();
-  double normalizedRelative = Trig::wrapAngle(robotRelativeAngle); // prob dont need this but j in case
-  return Trig::wrapAngle(currentFieldHeading + normalizedRelative);
+  return Trig::wrapAngle(currentOffset() + robotRelativeAngle);
 }

@@ -3,7 +3,7 @@
 #include <math.h>
 #include <trig.h>
 
-Defense::Defense() : defenseAngle(-1) {}
+Defense::Defense() : defenseAngle(-1), lastTangentAngle(-1) {}
 
 double Defense::normalize360(double angle)
 {
@@ -124,12 +124,28 @@ double Defense::defenseCalc(double ballAngle,
 
     if (lineNormalAngle < 0.0)
     {
+        lastTangentAngle = -1;
         Serial.print("defense Angle (no line): ");
         Serial.println(defenseAngle);
         return defenseAngle;
     }
 
     double tangentAngle = projectAngle(lineNormalAngle, defenseAngle);
+    bool sidewaysHeading = fabs(fabs(normalize180(headingCorrection)) - 90.0) <= sidewaysHeadingTolerance;
+
+    if (sidewaysHeading)
+    {
+        if (lastTangentAngle < 0.0)
+        {
+            lastTangentAngle = tangentAngle;
+        }
+        tangentAngle = normalize360(lastTangentAngle + 180.0);
+    }
+    else
+    {
+        lastTangentAngle = tangentAngle;
+    }
+
     defenseAngle = blendTangentWithNormal(tangentAngle, lineNormalAngle, chordLengthNormalized, crossLine);
 
     Serial.print("defense Angle: ");

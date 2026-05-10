@@ -15,8 +15,11 @@ public:
 
 private:
     double defenseAngle;
+    double lastTangentAngle;
+    double sidewaysHeadingTolerance = 7.0;
     elapsedMillis hardStop;
 
+    static const double sidewaysHeadingTolerance;
     static double normalize360(double angle);
     static double normalize180(double angle);
     static double angularDistance(double a, double b);

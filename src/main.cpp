@@ -42,7 +42,7 @@ enum class RobotMode
 };
 
 RobotMode kRobotMode = RobotMode::Defense;
-double defenseSpeedFactor = 0.3;
+double defenseSpeedFactor = 0.26;
 double offenseSpeedFactor = 0.2;
 
 
@@ -222,9 +222,9 @@ void runDefense()
 
   double desiredPerpendicularHeading = 0.0;
   bool desiredHeadingInBadZone = false;
+  const double badZoneHeadingLimit = 53.0;
   if (lineAngle != -5)
   {
-    const double badZoneHeadingLimit = 55.0;
     double relNormalA = Trig::wrapAngle(lineAngle);
     double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
     double fieldNormalA = compassSensor.robotRelativeToField(relNormalA);
@@ -248,8 +248,12 @@ void runDefense()
 
   if (desiredHeadingInBadZone) {
     Serial.println("YOU ARE APPROACHING A BAD ZONE");
-    movement.stop();
-    return;
+    if ((desiredPerpendicularHeading >= badZoneHeadingLimit && abs(defenseMoveAngle - 90) <  30) || 
+    (desiredPerpendicularHeading <= badZoneHeadingLimit && abs(defenseMoveAngle - 270) <  30)
+    ) {
+      movement.stop();
+      return;
+    }
   }
 
   movement.movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);

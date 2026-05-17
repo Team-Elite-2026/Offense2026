@@ -41,7 +41,7 @@ enum class RobotMode
   Defense
 };
 
-RobotMode kRobotMode = RobotMode::Defense;
+RobotMode kRobotMode = RobotMode::Offense;
 double defenseSpeedFactor = 0.26;
 double offenseSpeedFactor = 0.22;
 double lineAvoidanceSpeed = 0.15;
@@ -75,6 +75,7 @@ void runOffense()
 {
   if (switches.calibration())
   {
+    movement.stop();
     calibration.calibrateLineSensors();
     calibration.calibrateCompassSensor();
     Serial.println("Calibrating");
@@ -160,6 +161,7 @@ void runDefense()
 {
   if (switches.calibration())
   {
+    movement.stop();
     calibration.calibrateLineSensors();
     calibration.calibrateCompassSensor();
     Serial.println("Calibrating");

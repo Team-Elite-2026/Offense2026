@@ -13,18 +13,14 @@ private:
     Motor BRMotor;
 
     CompassSensor& compassSensor;
-    PID* myPID;
-    PID* myPID2;
 
     double max_power; 
     double Setpoint, Input, Output;
-    double Setpoint2, Input2, Output2;
 
     double kp = 0.6;
     double ki = 0;
     double kd = 0.000005;
 
-    int kickerHold = 1000;
     elapsedMillis timer;
     elapsedMillis active;
     int kickerPin = 30;
@@ -43,6 +39,9 @@ public:
     void stop();
     void kick();
     void kickBackground();
+
+    PID* myPID;
+
     
     
 

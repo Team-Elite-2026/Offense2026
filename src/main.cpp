@@ -43,7 +43,8 @@ enum class RobotMode
 
 RobotMode kRobotMode = RobotMode::Defense;
 double defenseSpeedFactor = 0.26;
-double offenseSpeedFactor = 0.2;
+double offenseSpeedFactor = 0.22;
+double lineAvoidanceSpeed = 0.15;
 
 
 
@@ -52,6 +53,9 @@ bool aimingGoal;
 
 void setup()
 {
+  if (kRobotMode == RobotMode::Offense) {
+    movement.myPID->kp = 0.15;
+  }
   Serial.begin(9600);
   Serial2.begin(2000000);
   compassSensor.begin();
@@ -107,6 +111,7 @@ void runOffense()
     Serial.println("Robot Angle: " + String(orbitAngle));
     Serial.println("Ball Angle: " + String(camera.ballAngle));
     Serial.println("Goal Angle: " + String(goalAngle));
+    Serial.println("Ball dist:" + String(camera.ballDist));
     movement.kickBackground();
     if (lineAngle == -5)
     {
@@ -115,7 +120,6 @@ void runOffense()
         if (switches.lightgate())
         {
           // movement.movement(0, 0.2, goalDesiredFieldAngle, aimingGoal); 
-          movement.rotateToGoal(-goalAngle, 0.2);
           if (fabs(goalAngle) < 5)
           { // if close to goal angle, kick
             movement.kick(); // wanna kick the ball to the goal
@@ -142,7 +146,7 @@ void runOffense()
       Serial.println("Avoidance angle: " + String(avoidanceAngle));
       if (switches.start())
       {
-        movement.movement(avoidanceAngle, offenseSpeedFactor, 0, false); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
+        movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0, true); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
       }
       else
       {
@@ -179,12 +183,13 @@ void runDefense()
 
   currentOffset = compassSensor.currentOffset();
 
-  Serial.println("Line Angle: " + String(lineAngle));
-  Serial.println("Ball Angle: " + String(camera.ballAngle));
-  Serial.println("Home Goal Angle: " + String(homeGoalAngle));
-  Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
-  Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
-  Serial.println("Current offset: " + String(currentOffset));
+  // Serial.println("Line Angle: " + String(lineAngle));
+  // Serial.println("Ball Angle: " + String(camera.ballAngle));
+  // Serial.println("Home Goal Angle: " + String(homeGoalAngle));
+  // Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
+  Serial.println("BALL DISTANCE: " + String(camera.ballDist));
+  // Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
+  // Serial.println("Current offset: " + String(currentOffset));
 
   if (!switches.start())
   {
@@ -272,8 +277,8 @@ void loop()
     runDefense();
   }
 
-  for (int i = 0; i < 10; i++) {
-    Serial.println();
-  }
+  // for (int i = 0; i < 10; i++) {
+  //   Serial.println();
+  // }
 
 }

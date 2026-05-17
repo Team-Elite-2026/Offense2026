@@ -174,30 +174,3 @@ void Movement::stop() {
     this->BRMotor.setSpeed(0);
 }
 
-
-void Movement::rotateToGoal(double goalDirection, double speedFactor)
-{
-  // Match findCorrectionRelOffset + the negation used in movement(..., AimingGoal true)
-  double err = goalDirection;
-  Input2 = std::fabs(err);
-
-  myPID2->Compute();
-  double c = 0.0;
-
-  if (err > 25) {
-    c = 255;
-  } else if (err < -25) {
-    c = -255;
-  } else if (err > 0) {
-    c = (Output / 100.0);
-  } else {
-    c = -1.0 * (Output / 100.0);
-  }
-  double s = speedFactor;
-
-  Serial.println(s * c);
-  FLMotor.setSpeed(s * (-c));
-  FRMotor.setSpeed(s * c);
-  BLMotor.setSpeed(s * (-c));
-  BRMotor.setSpeed(s * c);
-}

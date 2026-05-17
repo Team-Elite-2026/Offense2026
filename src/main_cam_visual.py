@@ -215,7 +215,7 @@ def run():
     "AeEnable": False,
     "AwbEnable": False,
     "ExposureTime": 10000,   # microseconds
-    "AnalogueGain": 0,
+    "AnalogueGain": 4.0,
     "Brightness": 0,
     "Contrast": 1,
     "Saturation": 1

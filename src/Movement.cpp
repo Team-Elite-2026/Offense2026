@@ -35,7 +35,7 @@ double Movement::findCorrectionRelZero(double goalDirection) {
     correction = (Output / 100);
   }
 
-  // Serial.println("Correction: " + String(correction));
+  Serial.println("Correction: " + String(correction));
 
   return correction;
 }
@@ -67,6 +67,7 @@ double Movement::findCorrectionRelOffset(double goalDirection) { // Makes the or
 
 // Need to add orientation to the movement function
 void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool AimingGoal) {
+  Serial.println("Began Movement");
   intended_movement_angle -= 180;
 
   if (intended_movement_angle < 0) {

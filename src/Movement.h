@@ -17,10 +17,6 @@ private:
     double max_power; 
     double Setpoint, Input, Output;
 
-    double kp = 0.6;
-    double ki = 0;
-    double kd = 0.000005;
-
     elapsedMillis timer;
     elapsedMillis active;
     int kickerPin = 30;
@@ -39,6 +35,11 @@ public:
     void stop();
     void kick();
     void kickBackground();
+
+
+    double kp = 0.6;
+    double ki = 0;
+    double kd = 0.000005;
 
     PID* myPID;
 

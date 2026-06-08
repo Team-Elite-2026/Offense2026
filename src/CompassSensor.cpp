@@ -22,9 +22,9 @@ void CompassSensor::callibrate() {
     uint8_t system, gyro, accel, mag = 0;
     bno.getCalibration(&system, &gyro, &accel, &mag);
     while (mag<3) {
-        Serial.print("Mag: ");
-        Serial.print(mag);
-        Serial.println("/3");
+        String magStatus = "Mag: " + String(mag) + "/3";
+        Serial.println(magStatus);
+        Serial8.println(magStatus);
         delay(500);
         bno.getCalibration(&system, &gyro, &accel, &mag);
     }

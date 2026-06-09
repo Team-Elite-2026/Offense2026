@@ -36,6 +36,13 @@ int CompassSensor::getOrientation() {
     return event.orientation.x;
 }
 
+// Returns yaw rate in rad/s, CW positive (negated from BNO055 CCW-positive convention).
+float CompassSensor::getOmegaRadS() {
+    sensors_event_t gyroEvent;
+    bno.getEvent(&gyroEvent, Adafruit_BNO055::VECTOR_GYROSCOPE);
+    return -gyroEvent.gyro.z;
+}
+
 // range between -180 and 180
 // this returns the offset between the current orientation and the zeroed angle
 int CompassSensor::currentOffset() {

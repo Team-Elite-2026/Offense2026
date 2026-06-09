@@ -1,4 +1,4 @@
-#include <Arduino.h>
+﻿#include <Arduino.h>
 #include <LineDetection.h>
 #include <CompassSensor.h>
 #include <Switches.h>
@@ -8,6 +8,7 @@
 #include <Cam.h>
 #include <Defense.h>
 #include <trig.h>
+#include <TrajectoryExecutor.h>
 
 double pincontrolRLA = 22;
 double pincontrolRLB = 23;
@@ -34,6 +35,7 @@ Movement movement(FL, FR, BL, BR, compassSensor);
 Orbit orbit(1);
 Cam camera;
 Defense defense;
+TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches);
 
 enum class RobotMode
 {
@@ -79,83 +81,85 @@ void runOffense()
     calibration.calibrateLineSensors();
     calibration.calibrateCompassSensor();
     Serial.println("Calibrating");
+    return;
+  }
+
+  lineDetection.Calculate();
+  lineAngle  = lineDetection.getAngle();
+  orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
+
+  if (switches.goalSide())
+  {
+    Serial.println("blue goal");
+    goalAngle = camera.blueGoal;
   }
   else
   {
-    // Serial.println("Testing Line Sensors");
-    lineDetection.Calculate();
-    camera.CamCalc();
-    lineAngle = lineDetection.getAngle();
-    orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
-    if (switches.goalSide())
-    {
-      Serial.println("blue goal");
-      goalAngle = camera.blueGoal;
-    }
-    else
-    {
-      Serial.println("yellow goal");
-      goalAngle = camera.yellowGoal;
-    }
+    Serial.println("yellow goal");
+    goalAngle = camera.yellowGoal;
+  }
 
-    if (goalAngle == -5)
-    {
-      goalAngle = 0;
-      aimingGoal = false;
-    }
-    else
-    {
-      aimingGoal = true;
-    }
+  if (goalAngle == -5)
+  {
+    goalAngle  = 0;
+    aimingGoal = false;
+  }
+  else
+  {
+    aimingGoal = true;
+  }
 
-    // Serial.println("Offset: " + String(compassSensor.currentOffset()));
-    Serial.println("Line Angle: " + String(lineAngle));
-    Serial.println("Robot Angle: " + String(orbitAngle));
-    Serial.println("Ball Angle: " + String(camera.ballAngle));
-    Serial.println("Goal Angle: " + String(goalAngle));
-    Serial.println("Ball dist:" + String(camera.ballDist));
-    Serial.println("Zeroed angle" + String(compassSensor.currentOffset()));
-    Serial.println("Orientation angle" + String(compassSensor.getOrientation()));
-    movement.kickBackground();
-    if (lineAngle == -5)
+  Serial.println("Line Angle: "        + String(lineAngle));
+  Serial.println("Robot Angle: "       + String(orbitAngle));
+  Serial.println("Ball Angle: "        + String(camera.ballAngle));
+  Serial.println("Goal Angle: "        + String(goalAngle));
+  Serial.println("Ball dist: "         + String(camera.ballDist));
+  Serial.println("Zeroed angle: "      + String(compassSensor.currentOffset()));
+  Serial.println("Orientation angle: " + String(compassSensor.getOrientation()));
+
+  movement.kickBackground();
+
+  // Always drain Serial2 so no trajectory packets are silently dropped,
+  // even when line avoidance overrides movement this iteration.
+  trajectoryExecutor.processSerial();
+
+  if (!switches.start())
+  {
+    movement.stop();
+    return;
+  }
+
+  // â”€â”€ Line avoidance â€“ highest-priority safety override â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // The trajectory executor is paused (not called) while avoiding the line.
+  // It will resume seamlessly on the next iteration once clear.
+  if (lineAngle != -5)
+  {
+    double avoidanceAngle = lineDetection.avoidanceAngle();
+    Serial.println("Avoidance angle: " + String(avoidanceAngle));
+    movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0, false);
+    return;
+  }
+
+  // â”€â”€ Kicker: fire when ball is secure and we are aligned with the goal â”€â”€â”€â”€â”€â”€â”€
+  // THIS WILL HAVE TO CHANGE
+  if (switches.lightgate() && fabs(goalAngle) < 5)
+  {
+    movement.kick();
+    return;
+  }
+
+  // â”€â”€ Trajectory execution (Pipeline.md Steps 7â€“8) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // execute() returns false when no active chunk has been received yet,
+  // or after the grace period expires â€“ fall back to orbit-based approach.
+  if   (!trajectoryExecutor.execute())
+  {
+    if (camera.ballAngle != -5)
     {
-      if (switches.start())
-      {
-        if (switches.lightgate())
-        {
-          // movement.movement(0, 0.2, goalDesiredFieldAngle, aimingGoal); 
-          if (fabs(goalAngle) < 5)
-          { // if close to goal angle, kick
-            movement.kick(); // wanna kick the ball to the goal
-          }
-        }
-        else if (camera.ballAngle != -5)
-        {
-          // movement.movement(ballAngle, offenseSpeedFactor, camera.ballAngle, false); // wanna try to face dir of ball to get into dribbler so no trying to aim to the goal
-          movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal); // j using default orbit aiming towards the goal if seen
-        }
-        else
-        {
-          movement.stop();
-        }
-      }
-      else
-      {
-        movement.stop();
-      }
+      movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal);
     }
     else
     {
-      double avoidanceAngle = lineDetection.avoidanceAngle();
-      Serial.println("Avoidance angle: " + String(avoidanceAngle));
-      if (switches.start())
-      {
-        movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0 , false); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
-      }
-      else
-      {
-        movement.stop();
-      }
+      movement.stop();
     }
   }
 }
@@ -172,7 +176,6 @@ void runDefense()
   }
 
   lineDetection.Calculate();
-  camera.CamCalc();
   lineAngle = lineDetection.getAngle();
   maxChordLength = lineDetection.getChordLengthFurthestPairNormalized();
   if (lineAngle != -5)

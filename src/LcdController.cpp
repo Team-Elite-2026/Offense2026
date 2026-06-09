@@ -12,7 +12,7 @@ LcdController::LcdController(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _robotMode(robotMode),
     _commandLength(0)
 {
-  state = {false, false, false, true, false, false,
+  state = {false, false, false, true, false, false, false,
            LcdStartMode::None, LcdStartPosition::None, 0, 0};
 }
 
@@ -45,6 +45,15 @@ bool LcdController::isGoalBlueSelected() const
     return state.goalIsBlue;
   }
   return _switches.goalSide();
+}
+
+uint8_t LcdController::telemetryModeOverride() const
+{
+  if (!state.robotModeOverrideActive)
+  {
+    return 0u;
+  }
+  return (_robotMode == RobotMode::Offense) ? 1u : 2u;
 }
 
 void LcdController::printLine(const String& line)
@@ -182,6 +191,7 @@ void LcdController::handleCommand(const char* command)
 
   if (strcmp(command, "MODE:OFFENSE") == 0)
   {
+    state.robotModeOverrideActive = true;
     _robotMode = RobotMode::Offense;
     applyRobotModeSettings();
     return;
@@ -189,8 +199,15 @@ void LcdController::handleCommand(const char* command)
 
   if (strcmp(command, "MODE:DEFENSE") == 0)
   {
+    state.robotModeOverrideActive = true;
     _robotMode = RobotMode::Defense;
     applyRobotModeSettings();
+    return;
+  }
+
+  if (strcmp(command, "MODE:AUTO") == 0)
+  {
+    state.robotModeOverrideActive = false;
     return;
   }
 

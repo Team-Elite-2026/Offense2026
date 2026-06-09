@@ -75,12 +75,15 @@ struct TeensyTelemetryPayload {
     float   mouseVxBodyMmS;  // mouse X body-frame (mm/s, +right)
     float   mouseVyBodyMmS;  // mouse Y body-frame (mm/s, +forward)
     float   omegaRadS;       // gyro Z rate (rad/s, CW positive)
-    uint8_t  hasBall;          // beam-break: 1 = ball in intake
+    uint8_t hasBall;         // beam-break: 1 = ball in intake
+    uint8_t startEnabled;    // LCD-adjusted start state
+    uint8_t goalIsBlue;      // 1 = attack blue, defend yellow
+    uint8_t modeOverride;    // 0 = auto, 1 = manual offense, 2 = manual defense
     uint16_t serialLatencyUs;  // one-way serial latency from handleClockPong (µs); 0 until first pong
-    uint8_t  _pad1;
+    uint16_t reserved;
 };
 #pragma pack(pop)
-static_assert(sizeof(TeensyTelemetryPayload) == 20, "TeensyTelemetryPayload must be 20 bytes");
+static_assert(sizeof(TeensyTelemetryPayload) == 24, "TeensyTelemetryPayload must be 24 bytes");
 
 static constexpr uint16_t TELEMETRY_PKT_LEN     = sizeof(TeensyTelemetryPayload);
 static constexpr uint32_t TELEMETRY_INTERVAL_MS = 10;  // 100 Hz odometry stream
@@ -97,6 +100,7 @@ public:
 
     // Inject mouse velocity from LinePCBComm (called by main.cpp after update()).
     void setMouseVelocity(float vx, float vy);
+    void setMatchState(bool startEnabled, bool goalIsBlue, uint8_t modeOverride);
 
     // Execute the time-indexed action from the active chunk.
     // Returns true while actively driving (nominal or grace-period hold).
@@ -140,6 +144,9 @@ private:
     // Mouse velocity injected from LinePCBComm via setMouseVelocity()
     float vxMouseMs_ = 0.0f;
     float vyMouseMs_ = 0.0f;
+    bool startEnabled_ = false;
+    bool goalIsBlue_ = true;
+    uint8_t modeOverride_ = 0;
 
     // â”€â”€ Serial parse state machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     enum class ParseState : uint8_t {

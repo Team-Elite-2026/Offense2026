@@ -155,6 +155,12 @@ void TrajectoryExecutor::processSerial() {
     }
 }
 
+void TrajectoryExecutor::setMatchState(bool startEnabled, bool goalIsBlue, uint8_t modeOverride) {
+    startEnabled_ = startEnabled;
+    goalIsBlue_ = goalIsBlue;
+    modeOverride_ = modeOverride;
+}
+
 // â”€â”€â”€ Chunk arrival handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 void TrajectoryExecutor::onChunkReceived(const ActionChunk& chunk) {
     if (!is_first_chunk &&
@@ -186,11 +192,14 @@ void TrajectoryExecutor::sendTelemetry() {
     p.mouseVyBodyMmS = readMouseVy() * 1000.0f;   // m/s -> mm/s
     p.omegaRadS      = imu.getOmegaRadS();
     p.hasBall         = sw.lightgate() ? 1u : 0u;
+    p.startEnabled    = startEnabled_ ? 1u : 0u;
+    p.goalIsBlue      = goalIsBlue_ ? 1u : 0u;
+    p.modeOverride    = modeOverride_;
     p.serialLatencyUs = measuredLatencyUs_;
-    p._pad1           = 0;
+    p.reserved        = 0;
 
-    // Frame: [magic 4B][type 1B][len 2B][payload 20B][CRC-32 4B] = 31 bytes
-    constexpr uint16_t plen = TELEMETRY_PKT_LEN;  // 20
+    // Frame: [magic 4B][type 1B][len 2B][payload 24B][CRC-32 4B] = 35 bytes
+    constexpr uint16_t plen = TELEMETRY_PKT_LEN;
     uint8_t frame[4 + 1 + 2 + plen + 4];
     memcpy(frame + 0, PKT_MAGIC_BYTES, 4);
     frame[4] = PKT_TYPE_TELEMETRY;

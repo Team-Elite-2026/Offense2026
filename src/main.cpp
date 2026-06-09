@@ -141,7 +141,7 @@ void runOffense()
   // even when line avoidance overrides movement this iteration.
   trajectoryExecutor.processSerial();
 
-  if (!switches.start())
+  if (!lcdController.isStartEnabled())
   {
     movement.stop();
     return;
@@ -230,6 +230,9 @@ void loop()
   trajectoryExecutor.setMouseVelocity(linePCBComm.getMouseVx(), linePCBComm.getMouseVy());
 
   lcdController.readCommands();
+  trajectoryExecutor.setMatchState(lcdController.isStartEnabled(),
+                                   lcdController.isGoalBlueSelected(),
+                                   lcdController.telemetryModeOverride());
   if (kRobotMode == RobotMode::Offense)
   {
     runOffense();

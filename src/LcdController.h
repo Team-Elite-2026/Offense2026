@@ -27,6 +27,7 @@ struct LcdControlState
   bool startEnabled;
   bool goalOverrideActive;
   bool goalIsBlue;
+  bool robotModeOverrideActive;
   bool lineCalibrationActive;
   bool hasStartPosition;
   LcdStartMode startMode;
@@ -50,6 +51,7 @@ public:
 
   bool isStartEnabled() const;
   bool isGoalBlueSelected() const;
+  uint8_t telemetryModeOverride() const;
 
   LcdControlState state;
 

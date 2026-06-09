@@ -8,6 +8,7 @@
 #include <Cam.h>
 #include <Defense.h>
 #include <trig.h>
+#include <string.h>
 #include <TrajectoryExecutor.h>
 
 double pincontrolRLA = 22;
@@ -36,6 +37,7 @@ Orbit orbit(1);
 Cam camera;
 Defense defense;
 TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches);
+HardwareSerial& lcdSerial = Serial8;
 
 enum class RobotMode
 {
@@ -43,22 +45,415 @@ enum class RobotMode
   Defense
 };
 
+enum class LcdStartMode
+{
+  None,
+  Offense,
+  Defense
+};
+
+enum class LcdStartPosition
+{
+  None,
+  BehindBall,
+  BehindCenterRing,
+  Goal,
+  Neutral1,
+  Neutral2,
+  Neutral3,
+  Neutral4
+};
+
+struct LcdControlState
+{
+  bool startOverrideActive;
+  bool startEnabled;
+  bool goalOverrideActive;
+  bool goalIsBlue;
+  bool lineCalibrationActive;
+  bool hasStartPosition;
+  LcdStartMode startMode;
+  LcdStartPosition startPosition;
+  unsigned long lastTelemetryMs;
+  unsigned long lastCalibrationStatusMs;
+};
+
 RobotMode kRobotMode = RobotMode::Offense;
 double defenseSpeedFactor = 0.26;
 double offenseSpeedFactor = 0.22;
 double lineAvoidanceSpeed = 0.15;
+constexpr uint32_t kLcdBaud = 9600;
+constexpr unsigned long kLcdTelemetryIntervalMs = 250;
+constexpr unsigned long kLcdCalibrationStatusIntervalMs = 250;
+constexpr size_t kLcdCommandBufferSize = 96;
 
-
-
+LcdControlState lcdControl = {
+  false,
+  false,
+  false,
+  true,
+  false,
+  false,
+  LcdStartMode::None,
+  LcdStartPosition::None,
+  0,
+  0
+};
+char lcdCommandBuffer[kLcdCommandBufferSize];
+size_t lcdCommandLength = 0;
 double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
 bool aimingGoal;
 
-void setup()
+bool isStartEnabled()
 {
-  if (kRobotMode == RobotMode::Offense) {
+  if (lcdControl.startOverrideActive)
+  {
+    return lcdControl.startEnabled;
+  }
+  return switches.start();
+}
+
+bool isGoalBlueSelected()
+{
+  if (lcdControl.goalOverrideActive)
+  {
+    return lcdControl.goalIsBlue;
+  }
+  return switches.goalSide();
+}
+
+const char* robotModeToken(RobotMode mode)
+{
+  return (mode == RobotMode::Offense) ? "OFFENSE" : "DEFENSE";
+}
+
+void applyRobotModeSettings()
+{
+  if (kRobotMode == RobotMode::Offense)
+  {
     movement.myPID->SetTunings(0.3, movement.ki, movement.kd);
   }
+}
+
+void lcdPrintLine(const String& line)
+{
+  lcdSerial.println(line);
+}
+
+const char* lcdStartModeToken(LcdStartMode mode)
+{
+  switch (mode)
+  {
+    case LcdStartMode::Offense:
+      return "OFFENSE";
+    case LcdStartMode::Defense:
+      return "DEFENSE";
+    case LcdStartMode::None:
+    default:
+      return "NONE";
+  }
+}
+
+const char* lcdStartPositionToken(LcdStartPosition position)
+{
+  switch (position)
+  {
+    case LcdStartPosition::BehindBall:
+      return "BEHIND_BALL";
+    case LcdStartPosition::BehindCenterRing:
+      return "BEHIND_CENTER_RING";
+    case LcdStartPosition::Goal:
+      return "GOAL";
+    case LcdStartPosition::Neutral1:
+      return "NEUTRAL_1";
+    case LcdStartPosition::Neutral2:
+      return "NEUTRAL_2";
+    case LcdStartPosition::Neutral3:
+      return "NEUTRAL_3";
+    case LcdStartPosition::Neutral4:
+      return "NEUTRAL_4";
+    case LcdStartPosition::None:
+    default:
+      return "NONE";
+  }
+}
+
+bool parseLcdStartMode(const char* token, LcdStartMode& mode)
+{
+  if (strcmp(token, "OFFENSE") == 0)
+  {
+    mode = LcdStartMode::Offense;
+    return true;
+  }
+  if (strcmp(token, "DEFENSE") == 0)
+  {
+    mode = LcdStartMode::Defense;
+    return true;
+  }
+  return false;
+}
+
+bool parseLcdStartPosition(const char* token, LcdStartPosition& position)
+{
+  if (strcmp(token, "BEHIND_BALL") == 0)
+  {
+    position = LcdStartPosition::BehindBall;
+    return true;
+  }
+  if (strcmp(token, "BEHIND_CENTER_RING") == 0)
+  {
+    position = LcdStartPosition::BehindCenterRing;
+    return true;
+  }
+  if (strcmp(token, "GOAL") == 0)
+  {
+    position = LcdStartPosition::Goal;
+    return true;
+  }
+  if (strcmp(token, "NEUTRAL_1") == 0)
+  {
+    position = LcdStartPosition::Neutral1;
+    return true;
+  }
+  if (strcmp(token, "NEUTRAL_2") == 0)
+  {
+    position = LcdStartPosition::Neutral2;
+    return true;
+  }
+  if (strcmp(token, "NEUTRAL_3") == 0)
+  {
+    position = LcdStartPosition::Neutral3;
+    return true;
+  }
+  if (strcmp(token, "NEUTRAL_4") == 0)
+  {
+    position = LcdStartPosition::Neutral4;
+    return true;
+  }
+  return false;
+}
+
+void logStartPositionSelection()
+{
+  Serial.print("LCD Start Position: ");
+  Serial.print(lcdStartModeToken(lcdControl.startMode));
+  Serial.print(" / ");
+  Serial.println(lcdStartPositionToken(lcdControl.startPosition));
+}
+
+void sendLcdLineArray()
+{
+  lcdSerial.print("LACT:");
+  for (int i = 0; i < 48; i++)
+  {
+    lcdSerial.print(lineDetection.activatedVals[i]);
+    if (i < 47)
+    {
+      lcdSerial.print(",");
+    }
+  }
+  lcdSerial.println();
+}
+
+void sendLcdTelemetry()
+{
+  unsigned long now = millis();
+  if (now - lcdControl.lastTelemetryMs < kLcdTelemetryIntervalMs)
+  {
+    return;
+  }
+  lcdControl.lastTelemetryMs = now;
+
+  if (isGoalBlueSelected())
+  {
+    lcdPrintLine("blue goal");
+  }
+  else
+  {
+    lcdPrintLine("yellow goal");
+  }
+
+  lcdPrintLine("Mode: " + String(robotModeToken(kRobotMode)));
+  lcdPrintLine(String("Light Gate: ") + (switches.lightgate() ? "BLOCKED" : "CLEAR"));
+  lcdPrintLine("Battery: -1");
+  lcdPrintLine(lcdControl.lineCalibrationActive ? "Calibrating" : "Line Cal: IDLE");
+  lcdPrintLine("Orientation angle" + String(compassSensor.getOrientation()));
+  lcdPrintLine("Line Angle: " + String(lineAngle));
+  lcdPrintLine("Avoidance angle: " + String(avoidanceAngle));
+  sendLcdLineArray();
+}
+
+void sendLcdCalibrationStatus()
+{
+  unsigned long now = millis();
+  if (now - lcdControl.lastCalibrationStatusMs < kLcdCalibrationStatusIntervalMs)
+  {
+    return;
+  }
+  lcdControl.lastCalibrationStatusMs = now;
+  lcdPrintLine("Calibrating");
+}
+
+bool handleStartPositionCommand(const char* command)
+{
+  if (strncmp(command, "STARTPOS:", 9) != 0)
+  {
+    return false;
+  }
+
+  const char* modeToken = command + 9;
+  const char* separator = strchr(modeToken, ':');
+  if (separator == NULL)
+  {
+    return true;
+  }
+
+  char modeBuffer[16];
+  size_t modeLength = (size_t)(separator - modeToken);
+  if (modeLength == 0 || modeLength >= sizeof(modeBuffer))
+  {
+    return true;
+  }
+
+  memcpy(modeBuffer, modeToken, modeLength);
+  modeBuffer[modeLength] = '\0';
+
+  LcdStartMode parsedMode = LcdStartMode::None;
+  LcdStartPosition parsedPosition = LcdStartPosition::None;
+  if (!parseLcdStartMode(modeBuffer, parsedMode) || !parseLcdStartPosition(separator + 1, parsedPosition))
+  {
+    return true;
+  }
+
+  lcdControl.hasStartPosition = true;
+  lcdControl.startMode = parsedMode;
+  lcdControl.startPosition = parsedPosition;
+  logStartPositionSelection();
+  return true;
+}
+
+void handleLcdCommand(const char* command)
+{
+  if (command[0] == '\0')
+  {
+    return;
+  }
+
+  Serial.print("LCD CMD: ");
+  Serial.println(command);
+
+  if (strcmp(command, "CMD:START") == 0)
+  {
+    lcdControl.startOverrideActive = true;
+    lcdControl.startEnabled = true;
+    return;
+  }
+
+  if (strcmp(command, "CMD:STOP") == 0)
+  {
+    lcdControl.startOverrideActive = true;
+    lcdControl.startEnabled = false;
+    movement.stop();
+    return;
+  }
+
+  if (strcmp(command, "GOAL:BLUE") == 0)
+  {
+    lcdControl.goalOverrideActive = true;
+    lcdControl.goalIsBlue = true;
+    return;
+  }
+
+  if (strcmp(command, "GOAL:YELLOW") == 0)
+  {
+    lcdControl.goalOverrideActive = true;
+    lcdControl.goalIsBlue = false;
+    return;
+  }
+
+  if (strcmp(command, "MODE:OFFENSE") == 0)
+  {
+    kRobotMode = RobotMode::Offense;
+    applyRobotModeSettings();
+    return;
+  }
+
+  if (strcmp(command, "MODE:DEFENSE") == 0)
+  {
+    kRobotMode = RobotMode::Defense;
+    applyRobotModeSettings();
+    return;
+  }
+
+  if (strcmp(command, "CMD:CALIB_LINE_START") == 0)
+  {
+    lcdControl.lineCalibrationActive = true;
+    movement.stop();
+    return;
+  }
+
+  if (strcmp(command, "CMD:CALIB_LINE_STOP") == 0)
+  {
+    lcdControl.lineCalibrationActive = false;
+    return;
+  }
+
+  handleStartPositionCommand(command);
+}
+
+void readLcdCommands()
+{
+  while (lcdSerial.available() > 0)
+  {
+    char incoming = (char)lcdSerial.read();
+    if (incoming == '\r')
+    {
+      continue;
+    }
+
+    if (incoming == '\n')
+    {
+      lcdCommandBuffer[lcdCommandLength] = '\0';
+      handleLcdCommand(lcdCommandBuffer);
+      lcdCommandLength = 0;
+      continue;
+    }
+
+    if (lcdCommandLength < (kLcdCommandBufferSize - 1))
+    {
+      lcdCommandBuffer[lcdCommandLength++] = incoming;
+    }
+  }
+}
+
+bool runRequestedCalibration()
+{
+  if (switches.calibration())
+  {
+    movement.stop();
+    calibration.calibrateLineSensors();
+    calibration.calibrateCompassSensor();
+    Serial.println("Calibrating");
+    sendLcdCalibrationStatus();
+    return true;
+  }
+
+  if (lcdControl.lineCalibrationActive)
+  {
+    movement.stop();
+    calibration.calibrateLineSensors();
+    sendLcdCalibrationStatus();
+    return true;
+  }
+
+  return false;
+}
+
+void setup()
+{
+  applyRobotModeSettings();
   Serial.begin(9600);
+  lcdSerial.begin(kLcdBaud);
   Serial2.begin(2000000);
   compassSensor.begin();
   compassSensor.callibrate();
@@ -66,7 +461,7 @@ void setup()
 
 double getHomeGoalAngle()
 {
-  if (switches.goalSide())
+  if (isGoalBlueSelected())
   {
     return camera.yellowGoal;
   }
@@ -75,7 +470,8 @@ double getHomeGoalAngle()
 
 void runOffense()
 {
-  if (switches.calibration())
+  avoidanceAngle = -5;
+  if (runRequestedCalibration())
   {
     movement.stop();
     calibration.calibrateLineSensors();
@@ -84,11 +480,12 @@ void runOffense()
     return;
   }
 
+  // Serial.println("Testing Line Sensors");
   lineDetection.Calculate();
-  lineAngle  = lineDetection.getAngle();
+  camera.CamCalc();
+  lineAngle = lineDetection.getAngle();
   orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
-
-  if (switches.goalSide())
+  if (isGoalBlueSelected())
   {
     Serial.println("blue goal");
     goalAngle = camera.blueGoal;
@@ -166,12 +563,9 @@ void runOffense()
 
 void runDefense()
 {
-  if (switches.calibration())
+  avoidanceAngle = -5;
+  if (runRequestedCalibration())
   {
-    movement.stop();
-    calibration.calibrateLineSensors();
-    calibration.calibrateCompassSensor();
-    Serial.println("Calibrating");
     return;
   }
 
@@ -199,7 +593,9 @@ void runDefense()
   // Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
   // Serial.println("Current offset: " + String(currentOffset));
 
-  if (!switches.start())
+  sendLcdTelemetry();
+
+  if (!isStartEnabled())
   {
     movement.stop();
     return;
@@ -221,6 +617,7 @@ void runDefense()
 
 void loop()
 {
+  readLcdCommands();
   if (kRobotMode == RobotMode::Offense)
   {
     runOffense();

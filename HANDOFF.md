@@ -1,9 +1,34 @@
 ﻿# Teensy Handoff — QuantumStrike Motion Pipeline
-*Last updated: 2026-06-08 (Session 4)*
+*Last updated: 2026-06-08 (Session 7)*
 
 ---
 
 ## Session History
+
+### Session 7 — LinePCB split: line sensors + mouse sensor moved to separate Teensy 4.0
+
+- **New architecture**: `LinePCBCode2026` is a new PlatformIO project for a Teensy 4.0 that owns all line sensors (MCP3008 ADCs via SPI) and the PMW3389 mouse sensor (SPI). It sends processed data to the main Teensy 4.1 over **Serial2 @ 1 Mbaud** (4.0 TX2/RX2 ↔ 4.1 TX2/RX2).
+- **Pi serial port moved**: Pi ↔ Teensy 4.1 communication shifted from `Serial2` to **`Serial3`** (`TrajectoryExecutor` updated throughout). Wire: Pi TX → Teensy 4.1 RX3 (pin 15), Pi RX ← Teensy 4.1 TX3 (pin 14).
+- **LinePCBCode2026 new files**:
+  - `src/LinePCBController.h/.cpp` — `LinePCBController` class: runs `LineDetection::Calculate()` and PMW3389 `updateMouse()` every loop, sends `LinePCBDataPkt` each loop and `LinePCBDebugPkt` when debug flag is set, handles `LinePCBCmdPkt` commands from main Teensy (debug enable + calibration trigger).
+  - `src/LineDetection.h/.cpp`, `src/trig.h/.cpp` — copied verbatim from Offense2026; no changes.
+  - `src/main.cpp` — trivial: constructs `LinePCBController(Serial2)`, calls `begin(1000000)` / `loop()`.
+  - `platformio.ini` — board changed to `teensy40`; lib_deps: `bakercp/MCP3XXX`.
+- **Offense2026 new files**:
+  - `src/LinePCBComm.h/.cpp` — `LinePCBComm` class: drains Serial2, parses `LinePCBDataPkt` / `LinePCBDebugPkt`, caches `lineAngle`, `avoidanceAngle`, `mouseVx/Vy`, `chordLength`, `crossLine`, `activatedVals[48]`. Provides `setDebugEnabled(bool)` and `triggerCalibration()` which send `LinePCBCmdPkt`.
+- **Offense2026 modified files**:
+  - `TrajectoryExecutor.h/.cpp` — `Serial2` → `Serial3` everywhere; all PMW3389 SPI code removed (`initMouse`, `updateMouseVelocity`, `pmwRead`, `pmwWrite`, `MOUSE_CS_PIN`, `MOUSE_CPI`, `lastMouseUs_`, `#include <SPI.h>`); added public `setMouseVelocity(float vx, float vy)`.
+  - `LcdController.h/.cpp` — constructor `LineDetection&` replaced with `LinePCBComm&`; `sendLineArray()` reads from `_linePCBComm.getActivatedVals()` instead of direct array access. Debug sensor data is populated when the main Teensy has `setDebugEnabled(true)` active.
+  - `Callibration.h` / `Calibration.cpp` — `LineDetection&` dependency removed; `calibrateLineSensors()` removed (now handled by `LinePCBCmdPkt::calibrate` on the LinePCB side). Only `calibrateCompassSensor()` remains.
+  - `main.cpp` — `LineDetection lineDetection` removed; `LinePCBComm linePCBComm(Serial2)` added; `lcdController` constructor updated; `Serial3.begin(2000000)` replaces `Serial2.begin(2000000)`; `linePCBComm.begin(1000000)` added in `setup()`; `loop()` calls `linePCBComm.update()` and `trajectoryExecutor.setMouseVelocity(...)` before anything else; line angle/avoidance read from `linePCBComm`.
+
+### Session 6 — LCD logic extracted into LcdController
+- All LCD-related code removed from `main.cpp` (~200 lines) and moved to `src/LcdController.h` / `src/LcdController.cpp`
+- `RobotMode`, `LcdStartMode`, `LcdStartPosition` enums and `LcdControlState` struct moved to `LcdController.h`
+- `LcdController` class takes constructor references to `HardwareSerial`, `LineDetection`, `CompassSensor`, `Switch`, `Movement`, and `RobotMode` — consistent with the existing module pattern
+- Public API: `begin(baud)`, `readCommands()`, `sendTelemetry(lineAngle, avoidanceAngle)`, `sendCalibrationStatus()`, `applyRobotModeSettings()`, `isStartEnabled()`, `isGoalBlueSelected()`, `state` (LcdControlState)
+- `lineAngle` / `avoidanceAngle` are now passed as parameters to `sendTelemetry()` rather than read as globals
+- `main.cpp` instantiates `LcdController lcdController(Serial8, lineDetection, compassSensor, switches, movement, kRobotMode)` and calls its methods in place of the old free functions
 
 ### Session 1 — TrajectoryExecutor created
 - `src/TrajectoryExecutor.h` and `src/TrajectoryExecutor.cpp` written (Pipeline.md Steps 7 & 8)
@@ -46,14 +71,31 @@
 
 | File | Status |
 |------|--------|
-| `src/TrajectoryExecutor.h` | S3: telemetry struct, PKT_TYPE_TELEMETRY, Switch&. S4: `serialLatencyUs` in struct, `measuredLatencyUs_` member. S5: SPI include, mouse constants, `vxMouseMs_`/`vyMouseMs_`/`lastMouseUs_` members, mouse method declarations |
-| `src/TrajectoryExecutor.cpp` | S3: sendTelemetry(), telemetry timer, Switch&. S4: handleClockPong saves latency, gyro stubs replaced. S5: `initMouse()`, `updateMouseVelocity()`, `pmwRead()`, `pmwWrite()` implemented; `readMouseVx/Vy()` return cached values |
-| `src/main.cpp` | Complete — passes `switches` to TrajectoryExecutor constructor |
+| `src/TrajectoryExecutor.h` | S7: SPI/PMW3389 code removed; `Serial3` for Pi; `setMouseVelocity()` added. S3–S5: telemetry, clock sync, Switch&. |
+| `src/TrajectoryExecutor.cpp` | S7: `Serial3` throughout; `initMouse`/`updateMouseVelocity`/`pmwRead`/`pmwWrite` removed; `setMouseVelocity()` added. |
+| `src/LinePCBComm.h` | S7: new — `LinePCBComm` class, protocol types, parser |
+| `src/LinePCBComm.cpp` | S7: new — `update()`, `onPacket()`, `sendCommand()`, getters |
+| `src/LcdController.h` | S7: `LinePCBComm&` replaces `LineDetection&`. S6: full class. |
+| `src/LcdController.cpp` | S7: `sendLineArray()` reads from `_linePCBComm.getActivatedVals()`. |
+| `src/Callibration.h` | S7: `LineDetection` dependency removed; only compass calibration remains. |
+| `src/Calibration.cpp` | S7: `calibrateLineSensors()` removed; constructor takes only `CompassSensor&`. |
+| `src/main.cpp` | S7: `LineDetection` removed; `LinePCBComm linePCBComm(Serial2)` added; `Serial3` for Pi; `loop()` calls `update()`+`setMouseVelocity()`. |
 | `src/Motor.cpp/h` | Unchanged |
-| `src/Movement.cpp/h` | Unchanged — still used for line avoidance |
+| `src/Movement.cpp/h` | Unchanged |
 | `src/Cam.cpp/h` | Unchanged — CamCalc no longer called; file kept for reference |
-| `src/CompassSensor.cpp/h` | S4: `getOmegaRadS()` added — BNO055 VECTOR_GYROSCOPE query, negated for CW convention |
+| `src/CompassSensor.cpp/h` | S4: `getOmegaRadS()` added |
 | `src/Defense.cpp/h` | Unchanged |
+
+### LinePCBCode2026 File State
+
+| File | Status |
+|------|--------|
+| `src/LinePCBController.h` | S7: new — protocol types, `LinePCBController` class |
+| `src/LinePCBController.cpp` | S7: new — line+mouse loop, packet send/recv, calibration trigger |
+| `src/LineDetection.h/.cpp` | S7: copied from Offense2026 — no changes |
+| `src/trig.h/.cpp` | S7: copied from Offense2026 — no changes |
+| `src/main.cpp` | S7: new — trivial `LinePCBController(Serial2)` setup/loop |
+| `platformio.ini` | S7: `board=teensy40`, `lib_deps: bakercp/MCP3XXX` |
 
 ---
 
@@ -180,10 +222,12 @@ if (!trajectoryExecutor.execute()) {
 
 | Priority | Item | Location | What to do |
 |----------|------|----------|------------|
+| High | Wire mouse sensor CS pin | `LinePCBCode2026/src/LinePCBController.h` `MOUSE_CS_PIN = -1` | Set `MOUSE_CS_PIN` to the Teensy 4.0 pin wired to PMW3389 NCS; verify `MOUSE_CPI` formula; confirm dx=+right/dy=+forward |
+| High | Verify Pi serial wiring | Hardware | Pi TX → Teensy 4.1 **RX3** (pin 15); Pi RX ← Teensy 4.1 **TX3** (pin 14). Previously Serial2 pins 7/8. |
 | High | Wheel angles | `TrajectoryExecutor.cpp` `ALPHA_WHEEL[]` | Physically verify against mechanical drawing. Values FR=−0.6109, RR=+0.6109, RL=+2.5307, FL=−2.5307 rad — unconfirmed |
-| Medium | Wire mouse sensor | `TrajectoryExecutor.h` `MOUSE_CS_PIN = -1` | Set `MOUSE_CS_PIN` to the Teensy SPI CS pin; verify `MOUSE_CPI` formula for your PMW3389 firmware; confirm dx=+right/dy=+forward in body frame |
-| Medium | Battery voltage | `readBatteryVoltage()` | Wire resistor divider to Teensy ADC |
-| Low | Motor constants kS/kV/kA | Top of `TrajectoryExecutor.cpp` | Bench-characterise via voltage step response. Placeholders: 0.5 / 0.08 / 0.02 |
+| Medium | Enable LCD debug | `main.cpp` | Call `linePCBComm.setDebugEnabled(true)` when `lcdController` is in debug mode so `activatedVals` stream to LCD |
+| Medium | Battery voltage | `readBatteryVoltage()` | Wire resistor divider to Teensy 4.1 ADC |
+| Low | Motor constants kS/kV/kA | Top of `TrajectoryExecutor.cpp` | Bench-characterise via voltage step response. Placeholders: 0.119 / 5.35 / 0.17 |
 | Low | Motor index→wiring | `executeAsymmetricDrive()` | Verify FR=0, BR=1, BL=2, FL=3 against physical wiring |
 
 ---

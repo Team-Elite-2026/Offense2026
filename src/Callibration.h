@@ -1,18 +1,15 @@
 #ifndef Calibration_H
 #define Calibration_H
 
-// Forward declarations instead of includes
-class LineDetection;  // Forward declaration
 class CompassSensor;  // Forward declaration
 
+// Line sensor calibration is handled by LinePCBController on the LinePCB Teensy.
+// Use LinePCBComm::triggerCalibration() to trigger a line-sensor calibration pass.
 class Calibration {
     public:
-        Calibration(LineDetection& lineDetection, CompassSensor& compassSensor);
-        void calibrateLineSensors(); 
+        explicit Calibration(CompassSensor& compassSensor);
         void calibrateCompassSensor();
-        int calibrateVal[48];
     private:
-        LineDetection& lineDetection;
         CompassSensor& compassSensor;
 };
 

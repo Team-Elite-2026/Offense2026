@@ -1,19 +1,8 @@
 #include <Callibration.h>
-#include <math.h>
-#include <LineDetection.h>
 #include <CompassSensor.h>
-#include <Movement.h>
 
-Calibration::Calibration(LineDetection& lineDetection, CompassSensor& compassSensor)
-    : lineDetection(lineDetection), compassSensor(compassSensor) {
-}
-
-
-void Calibration::calibrateLineSensors() {
-    lineDetection.updateLineSensors(false);
-    for (int i = 0; i < 48; i++) {
-        lineDetection.calibrateVals[i] = fmax(lineDetection.calibrateVals[i],lineDetection.sensorVals[i] * 1.5);
-    }
+Calibration::Calibration(CompassSensor& compassSensor)
+    : compassSensor(compassSensor) {
 }
 
 void Calibration::calibrateCompassSensor() {

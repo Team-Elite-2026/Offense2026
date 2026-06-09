@@ -2,17 +2,11 @@
 #define TRAJECTORY_EXECUTOR_H
 
 #include <Arduino.h>
-#include <SPI.h>
 #include <Switches.h>
 #include <Motor.h>
 #include <CompassSensor.h>
 
-// --- PMW3389 optical mouse sensor (SPI) -----------------------------------
-// TODO: replace -1 with the Teensy pin wired to PMW3389 NCS
-static constexpr int   MOUSE_CS_PIN = -1;
-// TODO: confirm CPI matches what is written to the Resolution registers in initMouse()
-static constexpr float MOUSE_CPI    = 1600.f;
-// TODO: verify axis polarity once sensor is mounted (+vx = robot right, +vy = robot forward)
+// Mouse velocity is now supplied externally via setMouseVelocity() from LinePCBComm.
 
 // â”€â”€â”€ Packed structs â€“ must match Pi serialisation byte-for-byte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Both platforms are little-endian (ARM), raw memcpy is safe.
@@ -97,9 +91,12 @@ public:
     TrajectoryExecutor(Motor& FL, Motor& FR, Motor& BL, Motor& BR,
                        CompassSensor& imu, Switch& sw);
 
-    // Drain Serial2, run the packet framing state machine, and send a clock-sync
-    // ping every PING_INTERVAL_MS.  Must be called every loop iteration.
+    // Drain Serial3 (Pi link), run the packet framing state machine, and send a
+    // clock-sync ping every PING_INTERVAL_MS.  Must be called every loop iteration.
     void processSerial();
+
+    // Inject mouse velocity from LinePCBComm (called by main.cpp after update()).
+    void setMouseVelocity(float vx, float vy);
 
     // Execute the time-indexed action from the active chunk.
     // Returns true while actively driving (nominal or grace-period hold).
@@ -140,10 +137,9 @@ private:
     uint32_t last_telemetry_ms  = 0;  // millis() of last Telemetry transmission
     uint16_t measuredLatencyUs_ = 0;  // one-way serial latency from last handleClockPong
 
-    // -- PMW3389 mouse sensor state -----------------------------------------
-    float    vxMouseMs_   = 0.0f;  // cached body-frame velocity (m/s, +right)
-    float    vyMouseMs_   = 0.0f;  // cached body-frame velocity (m/s, +forward)
-    uint32_t lastMouseUs_ = 0;     // micros() of last burst read
+    // Mouse velocity injected from LinePCBComm via setMouseVelocity()
+    float vxMouseMs_ = 0.0f;
+    float vyMouseMs_ = 0.0f;
 
     // â”€â”€ Serial parse state machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     enum class ParseState : uint8_t {
@@ -175,10 +171,6 @@ private:
     float    readBatteryVoltage();
     float    readMouseVx();
     float    readMouseVy();
-    void     initMouse();
-    void     updateMouseVelocity();
-    uint8_t  pmwRead(uint8_t reg);
-    void     pmwWrite(uint8_t reg, uint8_t val);
     uint32_t crc32_update(uint32_t crc, uint8_t b);
     uint32_t crc32(const uint8_t* data, uint16_t len);
 };

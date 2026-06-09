@@ -34,7 +34,6 @@ TrajectoryExecutor::TrajectoryExecutor(Motor& FL, Motor& FR, Motor& BL, Motor& B
     memset(&queued_chunk, 0, sizeof(queued_chunk));
     memset(payload_buf,   0, sizeof(payload_buf));
     memset(crc_buf,       0, sizeof(crc_buf));
-    initMouse();
 }
 
 // â”€â”€â”€ CRC-32/IEEE (poly 0xEDB88320, init 0xFFFFFFFF, finalise with ~) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -70,10 +69,8 @@ void TrajectoryExecutor::processSerial() {
         last_telemetry_ms = now_ms;
     }
 
-    updateMouseVelocity();
-
-    while (Serial2.available() > 0) {
-        uint8_t b = (uint8_t)Serial2.read();
+    while (Serial3.available() > 0) {
+        uint8_t b = (uint8_t)Serial3.read();
 
         switch (parse_state) {
 
@@ -201,7 +198,7 @@ void TrajectoryExecutor::sendTelemetry() {
     memcpy(frame + 7, &p, plen);
     uint32_t c = crc32(frame, 7 + plen);
     memcpy(frame + 7 + plen, &c, 4);
-    Serial2.write(frame, sizeof(frame));
+    Serial3.write(frame, sizeof(frame));
 }
 
 void TrajectoryExecutor::sendClockPing() {
@@ -216,7 +213,7 @@ void TrajectoryExecutor::sendClockPing() {
     // CRC over [magic|type|len|payload] = first 15 bytes.
     uint32_t c = crc32(frame, 15);
     memcpy(frame + 15, &c, 4);
-    Serial2.write(frame, sizeof(frame));
+    Serial3.write(frame, sizeof(frame));
 }
 
 // â”€â”€â”€ Clock sync: receive Pong (Pi â†’ Teensy) and update clock_offset_us â”€â”€â”€â”€â”€â”€â”€
@@ -367,98 +364,9 @@ float TrajectoryExecutor::readBatteryVoltage() {
 float TrajectoryExecutor::readMouseVx() { return vxMouseMs_; }
 float TrajectoryExecutor::readMouseVy() { return vyMouseMs_; }
 
-// --- PMW3389 SPI helpers ---------------------------------------------------
-
-uint8_t TrajectoryExecutor::pmwRead(uint8_t reg) {
-    SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
-    digitalWrite(MOUSE_CS_PIN, LOW);
-    SPI.transfer(reg & 0x7Fu);   // bit7 = 0 → read
-    delayMicroseconds(1);        // tSRAD
-    uint8_t data = SPI.transfer(0);
-    digitalWrite(MOUSE_CS_PIN, HIGH);
-    SPI.endTransaction();
-    delayMicroseconds(20);       // tSRR: min between reads
-    return data;
-}
-
-void TrajectoryExecutor::pmwWrite(uint8_t reg, uint8_t val) {
-    SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
-    digitalWrite(MOUSE_CS_PIN, LOW);
-    SPI.transfer(reg | 0x80u);   // bit7 = 1 → write
-    SPI.transfer(val);
-    digitalWrite(MOUSE_CS_PIN, HIGH);
-    SPI.endTransaction();
-    delayMicroseconds(120);      // tSWW: min between writes
-}
-
-// PMW3389 power-up sequence and CPI configuration.
-// No-op when MOUSE_CS_PIN < 0 (pin not yet assigned).
-void TrajectoryExecutor::initMouse() {
-    if (MOUSE_CS_PIN < 0) return;
-
-    pinMode(MOUSE_CS_PIN, OUTPUT);
-    digitalWrite(MOUSE_CS_PIN, HIGH);
-    SPI.begin();
-    delay(50);  // power stabilisation
-
-    pmwWrite(0x3A, 0x5A);  // Power_Up_Reset
-    delay(5);
-
-    // Drain residual motion registers after reset
-    pmwRead(0x02);  // Motion
-    pmwRead(0x03);  // Delta_X_L
-    pmwRead(0x04);  // Delta_X_H
-    pmwRead(0x05);  // Delta_Y_L
-    pmwRead(0x06);  // Delta_Y_H
-
-    // Set CPI: register value = (CPI / 50) - 1
-    // TODO: verify this formula matches your PMW3389 firmware version
-    const uint16_t cpiReg = (uint16_t)(MOUSE_CPI / 50.f + 0.5f) - 1;
-    pmwWrite(0x0F, cpiReg & 0xFF);         // Resolution_L
-    pmwWrite(0x10, (cpiReg >> 8) & 0xFF);  // Resolution_H
-
-    lastMouseUs_ = micros();
-}
-
-// PMW3389 Motion_Burst read. Updates vxMouseMs_ / vyMouseMs_.
-// No-op when MOUSE_CS_PIN < 0. Called every processSerial() iteration.
-void TrajectoryExecutor::updateMouseVelocity() {
-    if (MOUSE_CS_PIN < 0) return;
-
-    uint32_t now_us = micros();
-    float dt_s = (now_us - lastMouseUs_) / 1e6f;
-    if (dt_s < 0.0001f) return;  // guard against near-zero dt
-    lastMouseUs_ = now_us;
-
-    // Burst read: assert CS, send address, wait tSRAD_MOTBR, read 12 bytes
-    SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE3));
-    digitalWrite(MOUSE_CS_PIN, LOW);
-    SPI.transfer(0x16);      // Motion_Burst register address
-    delayMicroseconds(35);   // tSRAD_MOTBR
-    uint8_t motion = SPI.transfer(0);
-    SPI.transfer(0);         // Observation (unused)
-    uint8_t dx_l   = SPI.transfer(0);
-    uint8_t dx_h   = SPI.transfer(0);
-    uint8_t dy_l   = SPI.transfer(0);
-    uint8_t dy_h   = SPI.transfer(0);
-    for (int i = 0; i < 6; ++i) SPI.transfer(0);  // SQUAL, RawData fields (unused)
-    digitalWrite(MOUSE_CS_PIN, HIGH);
-    SPI.endTransaction();
-
-    if (!(motion & 0x80u)) {
-        vxMouseMs_ = 0.0f;
-        vyMouseMs_ = 0.0f;
-        return;
-    }
-
-    int16_t dx = (int16_t)((uint16_t)dx_h << 8 | dx_l);
-    int16_t dy = (int16_t)((uint16_t)dy_h << 8 | dy_l);
-
-    // counts → m/s:  counts × (25.4 mm/in ÷ CPI) ÷ 1000 mm/m ÷ dt_s
-    // TODO: verify +dx / +dy map to +right / +forward in robot body frame
-    const float mmPerCount = 25.4f / MOUSE_CPI;
-    vxMouseMs_ = (dx * mmPerCount) / (1000.0f * dt_s);
-    vyMouseMs_ = (dy * mmPerCount) / (1000.0f * dt_s);
+void TrajectoryExecutor::setMouseVelocity(float vx, float vy) {
+    vxMouseMs_ = vx;
+    vyMouseMs_ = vy;
 }
 
 void TrajectoryExecutor::emergencyBrake() {

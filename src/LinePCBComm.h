@@ -48,6 +48,10 @@ public:
     // Drain Serial2 and parse incoming packets. Call every loop iteration.
     void update();
 
+    // Feed the current robot heading so line recovery can stay stable even if
+    // the robot is rotated while sitting on or beyond the boundary.
+    void setRobotHeadingDegrees(float headingDegrees);
+
     // Send a debug-enable command to the LinePCB.
     // LinePCB will include a LinePCBDebugPkt each loop while enabled.
     void setDebugEnabled(bool enabled);
@@ -66,6 +70,10 @@ public:
 private:
     HardwareSerial& _serial;
 
+    float   _rawLineAngle      = -5.0f;
+    float   _rawAvoidanceAngle = -5.0f;
+    bool    _rawCrossLine      = false;
+
     float   _lineAngle      = -5.0f;
     float   _avoidanceAngle = -5.0f;
     float   _mouseVx        = 0.0f;
@@ -75,6 +83,13 @@ private:
     int16_t _activatedVals[48] = {};
 
     bool _debugEnabled = false;
+    bool  _hasHeadingReference = false;
+    float _robotHeadingDegrees = 0.0f;
+    float _previousRobotHeadingDegrees = 0.0f;
+    bool  _hasPreviousResolvedLineAngle = false;
+    float _previousResolvedLineAngle = -5.0f;
+    bool  _hasPreviousBaseAvoidanceAngle = false;
+    float _previousBaseAvoidanceAngle = -5.0f;
 
     enum class ParseState : uint8_t { MAGIC, TYPE, LEN_LO, LEN_HI, PAYLOAD, CSUM };
     ParseState _parseState = ParseState::MAGIC;
@@ -86,6 +101,10 @@ private:
     void onPacket(uint8_t type, const uint8_t* payload, uint16_t len);
     void sendCommand(uint8_t debugEnabled, uint8_t calibrate);
     uint8_t frameChecksum(uint8_t type, uint16_t len, const uint8_t* payload);
+    void recomputeResolvedState();
+    static float normalize360(float angle);
+    static float circularDistanceDegrees(float a, float b);
+    static float headingDeltaDegrees(float previousHeading, float currentHeading);
 };
 
 #endif

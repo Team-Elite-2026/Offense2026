@@ -15,6 +15,8 @@ class LineDetection {
         static Point points[48];
         void updateLineSensors(bool withDebug);
         void lineSensorDebug();
+        void setRobotHeadingDegrees(double headingDegrees);
+        void clearRobotHeadingReference();
         double sensorVals[48];
         static double magnitudes[48];
         double calibrateVals[48];
@@ -51,6 +53,13 @@ class LineDetection {
 
         bool crossLine;
         double prevAngle;
+        double previousBaseAvoidanceAngle;
+        double robotHeadingDegrees;
+        double previousRobotHeadingDegrees;
+        double previousResolvedAngle;
+        bool hasRobotHeadingReference;
+        bool hasPreviousResolvedAngle;
+        bool hasPreviousBaseAvoidanceAngle;
 };
 
 #endif 

@@ -226,6 +226,7 @@ void runDefense()
 void loop()
 {
   linePCBComm.update();
+  linePCBComm.setRobotHeadingDegrees((float)compassSensor.getOrientation());
   trajectoryExecutor.setMouseVelocity(linePCBComm.getMouseVx(), linePCBComm.getMouseVy());
 
   lcdController.readCommands();

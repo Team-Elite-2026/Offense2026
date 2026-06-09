@@ -1,10 +1,34 @@
 #include <LinePCBComm.h>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 
 LinePCBComm::LinePCBComm(HardwareSerial& serial)
     : _serial(serial) {
     memset(_payload, 0, sizeof(_payload));
     memset(_activatedVals, 0, sizeof(_activatedVals));
+}
+
+float LinePCBComm::normalize360(float angle) {
+    while (angle < 0.0f) {
+        angle += 360.0f;
+    }
+    while (angle >= 360.0f) {
+        angle -= 360.0f;
+    }
+    return angle;
+}
+
+float LinePCBComm::circularDistanceDegrees(float a, float b) {
+    float diff = fabsf(normalize360(a) - normalize360(b));
+    return std::min(diff, 360.0f - diff);
+}
+
+float LinePCBComm::headingDeltaDegrees(float previousHeading, float currentHeading) {
+    float delta = previousHeading - currentHeading;
+    while (delta < -180.0f) delta += 360.0f;
+    while (delta > 180.0f) delta -= 360.0f;
+    return delta;
 }
 
 void LinePCBComm::begin(uint32_t baud) {
@@ -16,6 +40,15 @@ uint8_t LinePCBComm::frameChecksum(uint8_t type, uint16_t len,
     uint8_t cs = type ^ (uint8_t)(len & 0xFF) ^ (uint8_t)(len >> 8);
     for (uint16_t i = 0; i < len; i++) cs ^= payload[i];
     return cs;
+}
+
+void LinePCBComm::setRobotHeadingDegrees(float headingDegrees) {
+    _robotHeadingDegrees = normalize360(headingDegrees);
+    if (!_hasHeadingReference) {
+        _previousRobotHeadingDegrees = _robotHeadingDegrees;
+    }
+    _hasHeadingReference = true;
+    recomputeResolvedState();
 }
 
 void LinePCBComm::update() {
@@ -64,16 +97,86 @@ void LinePCBComm::update() {
     }
 }
 
+void LinePCBComm::recomputeResolvedState() {
+    constexpr float kNoLineAngle = -5.0f;
+    constexpr float kCrossToggleThresholdDegrees = 90.0f;
+
+    if (_rawLineAngle == kNoLineAngle) {
+        _lineAngle = kNoLineAngle;
+        _avoidanceAngle = kNoLineAngle;
+        _crossLine = false;
+        _hasPreviousResolvedLineAngle = false;
+        _hasPreviousBaseAvoidanceAngle = false;
+        _previousResolvedLineAngle = kNoLineAngle;
+        _previousBaseAvoidanceAngle = kNoLineAngle;
+        if (_hasHeadingReference) {
+            _previousRobotHeadingDegrees = _robotHeadingDegrees;
+        }
+        return;
+    }
+
+    bool canRotatePrevious = _hasPreviousResolvedLineAngle && _hasHeadingReference;
+    float rotatedPreviousLineAngle = _previousResolvedLineAngle;
+    float rotatedPreviousBaseAvoidanceAngle = _previousBaseAvoidanceAngle;
+    if (canRotatePrevious) {
+        float headingDelta = headingDeltaDegrees(
+            _previousRobotHeadingDegrees, _robotHeadingDegrees);
+        rotatedPreviousLineAngle = normalize360(
+            _previousResolvedLineAngle + headingDelta);
+        if (_hasPreviousBaseAvoidanceAngle) {
+            rotatedPreviousBaseAvoidanceAngle = normalize360(
+                _previousBaseAvoidanceAngle + headingDelta);
+        }
+    }
+
+    bool lowConfidence = (_chordLength < 0.0f);
+
+    // If the line board only has a sparse / degenerate reading, keep rotating
+    // the last trusted line direction with the robot instead of snapping to a
+    // single noisy angle.
+    _lineAngle = _rawLineAngle;
+    if (lowConfidence && canRotatePrevious) {
+        _lineAngle = rotatedPreviousLineAngle;
+    }
+
+    float baseAvoidanceAngle = normalize360(_lineAngle + 180.0f);
+    if (!lowConfidence && _hasPreviousBaseAvoidanceAngle) {
+        float comparisonAngle = canRotatePrevious
+            ? rotatedPreviousBaseAvoidanceAngle
+            : _previousBaseAvoidanceAngle;
+        if (circularDistanceDegrees(baseAvoidanceAngle, comparisonAngle) >
+            kCrossToggleThresholdDegrees) {
+            _crossLine = !_crossLine;
+        }
+    } else if (!_hasPreviousBaseAvoidanceAngle) {
+        _crossLine = _rawCrossLine;
+    }
+
+    _avoidanceAngle = _crossLine ? _lineAngle : baseAvoidanceAngle;
+    _previousResolvedLineAngle = _lineAngle;
+    _hasPreviousResolvedLineAngle = true;
+
+    if (!lowConfidence) {
+        _previousBaseAvoidanceAngle = baseAvoidanceAngle;
+        _hasPreviousBaseAvoidanceAngle = true;
+    }
+
+    if (_hasHeadingReference) {
+        _previousRobotHeadingDegrees = _robotHeadingDegrees;
+    }
+}
+
 void LinePCBComm::onPacket(uint8_t type, const uint8_t* payload, uint16_t len) {
     if (type == LPKT_DATA && len >= (uint16_t)sizeof(LinePCBDataPkt)) {
         LinePCBDataPkt p;
         memcpy(&p, payload, sizeof(p));
-        _lineAngle      = p.lineAngle;
-        _avoidanceAngle = p.avoidanceAngle;
+        _rawLineAngle      = p.lineAngle;
+        _rawAvoidanceAngle = p.avoidanceAngle;
         _mouseVx        = p.mouseVx;
         _mouseVy        = p.mouseVy;
         _chordLength    = p.chordLength;
-        _crossLine      = (p.crossLine != 0);
+        _rawCrossLine   = (p.crossLine != 0);
+        recomputeResolvedState();
     } else if (type == LPKT_DEBUG && len >= (uint16_t)sizeof(LinePCBDebugPkt)) {
         LinePCBDebugPkt p;
         memcpy(&p, payload, sizeof(p));

@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Detection Visualizer</title>
+  <style>
+    :root {
+      --bg: #f3ead8;
+      --panel: #fff9ef;
+      --panel-strong: #fff4dc;
+      --ink: #18212b;
+      --muted: #5d6773;
+      --grid: #d7cdb9;
+      --ring: #b6a88b;
+      --sensor: #b2bbc3;
+      --sensor-active: #d94841;
+      --sensor-active-stroke: #7f1618;
+      --centroid: #f18f01;
+      --final: #0f766e;
+      --pca: #2563eb;
+      --pair: #b83280;
+      --carry: #c47e00;
+      --card-shadow: 0 18px 40px rgba(24, 33, 43, 0.12);
+      --radius: 24px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: "Segoe UI", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(241, 143, 1, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 26%),
+        linear-gradient(180deg, #f8f2e5 0%, var(--bg) 100%);
+    }
+
+    .shell {
+      width: min(1260px, calc(100vw - 32px));
+      margin: 24px auto 40px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero,
+    .controls,
+    .summary,
+    .legend,
+    .timeline,
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(24, 33, 43, 0.08);
+      border-radius: var(--radius);
+      box-shadow: var(--card-shadow);
+    }
+
+    .hero {
+      padding: 22px 24px 18px;
+      display: grid;
+      gap: 10px;
+      background:
+        linear-gradient(135deg, rgba(255, 244, 220, 0.92), rgba(255, 249, 239, 0.98)),
+        var(--panel);
+    }
+
+    .eyebrow {
+      font-size: 0.77rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 3vw, 3rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p,
+    .summary p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 72ch;
+    }
+
+    .controls,
+    .summary,
+    .legend,
+    .timeline {
+      padding: 18px 20px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 16px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    select,
+    input[type="range"],
+    button {
+      font: inherit;
+    }
+
+    select,
+    .slider-shell,
+    .toggle {
+      background: var(--panel-strong);
+      border: 1px solid rgba(24, 33, 43, 0.1);
+      border-radius: 16px;
+      padding: 12px 14px;
+    }
+
+    select {
+      color: var(--ink);
+      width: 100%;
+    }
+
+    .slider-shell {
+      display: grid;
+      gap: 12px;
+    }
+
+    .frame-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .frame-row button {
+      border: 0;
+      background: var(--ink);
+      color: #fff9ef;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease;
+    }
+
+    .frame-row button:hover {
+      transform: translateY(-1px);
+    }
+
+    .frame-row button:disabled {
+      opacity: 0.45;
+      cursor: default;
+      transform: none;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--final);
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+    }
+
+    .toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--final);
+    }
+
+    .summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .summary-strong {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .card-header {
+      padding: 18px 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .card-header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.93rem;
+    }
+
+    .angle-pill {
+      min-width: 104px;
+      border-radius: 999px;
+      background: rgba(24, 33, 43, 0.06);
+      padding: 10px 14px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .viz-shell {
+      padding: 0 16px 10px;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.72), rgba(255, 249, 239, 0.88));
+      border-radius: 20px;
+      border: 1px solid rgba(24, 33, 43, 0.08);
+    }
+
+    .metrics {
+      padding: 0 20px 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(24, 33, 43, 0.06);
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .chip .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 16px;
+      font-size: 0.9rem;
+    }
+
+    .metric {
+      display: grid;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+
+    .legend {
+      display: grid;
+      gap: 12px;
+    }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(24, 33, 43, 0.05);
+      font-size: 0.83rem;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .swatch {
+      width: 22px;
+      height: 4px;
+      border-radius: 999px;
+      background: currentColor;
+      display: inline-block;
+    }
+
+    .swatch.dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .frame-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .frame-card {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(24, 33, 43, 0.05);
+      border: 1px solid transparent;
+      transition: border-color 120ms ease, transform 120ms ease;
+      cursor: pointer;
+    }
+
+    .frame-card.active {
+      border-color: rgba(15, 118, 110, 0.38);
+      transform: translateY(-1px);
+      background: rgba(15, 118, 110, 0.08);
+    }
+
+    .frame-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.88rem;
+    }
+
+    .frame-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.81rem;
+      line-height: 1.45;
+    }
+
+    .delta-banner {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(90deg, rgba(241, 143, 1, 0.14), rgba(15, 118, 110, 0.1));
+      font-family: var(--mono);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    @media (max-width: 780px) {
+      .shell {
+        width: min(100vw - 18px, 1260px);
+        margin: 12px auto 24px;
+      }
+
+      .card-header {
+        flex-direction: column;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Offense2026 Debug Tool</div>
+      <h1>Line Detection State Visualizer</h1>
+      <p>
+        This page uses the real 48-sensor ring geometry from <code>src/LineDetection.cpp</code>
+        to compare the old PCA-only angle resolver against the new stateful resolver. It highlights
+        when the new code stays on PCA, when it switches to the opposite-pair fallback, and when it
+        rotates the previously trusted angle through ambiguous sensor patterns.
+      </p>
+    </section>
+
+    <section class="controls">
+      <div class="control-grid">
+        <label>
+          Scenario
+          <select id="scenarioSelect"></select>
+        </label>
+
+        <div class="slider-shell">
+          <label for="frameSlider">Frame</label>
+          <div class="frame-row">
+            <button id="prevFrame" type="button">Prev</button>
+            <input id="frameSlider" type="range" min="0" max="0" step="1" value="0">
+            <button id="nextFrame" type="button">Next</button>
+          </div>
+          <div id="frameLabel" class="summary-strong"></div>
+        </div>
+
+        <label class="toggle">
+          <input id="showHelpers" type="checkbox" checked>
+          <span>Show PCA, opposite-pair, and rotated-carryover helpers</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="summary">
+      <p id="scenarioDescription"></p>
+      <p id="frameDescription"></p>
+      <div id="deltaBanner" class="delta-banner"></div>
+    </section>
+
+    <section class="comparison">
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <h2>Old Resolver</h2>
+            <p>PCA or single-sensor centroid only. No grouped-pattern logic and no heading-aware carryover.</p>
+          </div>
+          <div id="oldAnglePill" class="angle-pill">Angle: N/A</div>
+        </div>
+        <div class="viz-shell">
+          <svg id="oldSvg" viewBox="0 0 360 360" aria-label="Old resolver visual"></svg>
+        </div>
+        <div class="metrics">
+          <div id="oldChips" class="chips"></div>
+          <div id="oldMetrics" class="metric-grid"></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <h2>New Resolver</h2>
+            <p>Matches the current stateful logic: grouped-trigger analysis, opposite-pair fallback, and rotated history carryover.</p>
+          </div>
+          <div id="newAnglePill" class="angle-pill">Angle: N/A</div>
+        </div>
+        <div class="viz-shell">
+          <svg id="newSvg" viewBox="0 0 360 360" aria-label="New resolver visual"></svg>
+        </div>
+        <div class="metrics">
+          <div id="newChips" class="chips"></div>
+          <div id="newMetrics" class="metric-grid"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="legend">
+      <div class="summary-strong">Legend</div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="swatch dot" style="color: var(--sensor-active);"></span>Active sensor</div>
+        <div class="legend-item"><span class="swatch dot" style="color: var(--centroid);"></span>Centroid</div>
+        <div class="legend-item"><span class="swatch" style="color: var(--final);"></span>Resolved angle ray</div>
+        <div class="legend-item"><span class="swatch" style="color: var(--pca);"></span>PCA line fit</div>
+        <div class="legend-item"><span class="swatch" style="color: var(--pair);"></span>Opposite-pair helper</div>
+        <div class="legend-item"><span class="swatch" style="color: var(--carry);"></span>Rotated previous angle</div>
+      </div>
+    </section>
+
+    <section class="timeline">
+      <div class="summary-strong">Scenario Timeline</div>
+      <div id="timelineStrip" class="frame-strip"></div>
+    </section>
+  </main>
+
+  <script>
+    const POINTS = [
+      [86.5, 0], [85.63, -12.219], [80.169, -18.904], [71.206, -24.997],
+      [64.174, -35.019], [57.142, -45.062], [50.11, -55.104], [43.602, -65.388],
+      [44.506, -74.275], [33.562, -79.777], [21.954, -83.689], [9.912, -85.394],
+      [-2.326, -86.469], [-14.518, -85.282], [-26.423, -82.397], [-37.805, -77.871],
+      [-47.732, -71.282], [-45.747, -61.336], [-52.779, -51.293], [-59.811, -41.251],
+      [-66.843, -31.208], [-73.874, -21.166], [-84.136, -19.66], [-86.166, -7.597],
+      [-86.375, 4.65], [-84.852, 16.804], [-75.774, 18.931], [-68.537, 28.788],
+      [-61.506, 38.83], [-54.474, 48.873], [-47.442, 58.915], [-45.728, 69.253],
+      [-40.44, 76.541], [-31.672, 72.424], [-21.946, 65.169], [-9.933, 63.291],
+      [2.326, 63.291], [14.583, 63.379], [26.052, 67.343], [34.246, 76.291],
+      [44.465, 74.207], [43.602, 65.388], [50.11, 55.104], [57.142, 45.062],
+      [64.174, 35.019], [71.206, 24.977], [80.169, 18.904], [85.633, 12.219]
+    ];
+
+    const IDEAL_RING_RADIUS = 89.0;
+    const NO_LINE = -5.0;
+
+    const SCENARIOS = [
+      {
+        id: "clean-arc",
+        name: "Clean contiguous edge",
+        description: "A simple moving arc. Both versions should agree, which helps establish the baseline before the weird cases.",
+        seedState: {},
+        frames: [
+          {
+            heading: 0,
+            active: [34, 35, 36, 37, 38, 39],
+            note: "Six adjacent sensors produce one clean island, so PCA is the right answer."
+          },
+          {
+            heading: 10,
+            active: [35, 36, 37, 38, 39, 40],
+            note: "The arc shifts smoothly around the ring. The new logic stays on PCA instead of forcing a fallback."
+          },
+          {
+            heading: 20,
+            active: [36, 37, 38, 39, 40, 41],
+            note: "Still a single contiguous island. Both resolvers remain effectively identical."
+          }
+        ]
+      },
+      {
+        id: "fragmented-groups",
+        name: "Fragmented sensor islands",
+        description: "This synthetic pattern breaks the ring into multiple islands. The old code still trusts PCA; the new code can switch to the opposite-pair path.",
+        seedState: {},
+        frames: [
+          {
+            heading: 0,
+            active: [4, 5, 6, 19, 20, 33, 34],
+            note: "Three separate islands are active at once. The stateful resolver treats that as fragmented geometry and uses the most-opposed pair."
+          },
+          {
+            heading: 8,
+            active: [5, 6, 7, 20, 21, 34, 35],
+            note: "The fragmented pattern moves slightly, but the opposite-pair logic still gives a more deliberate direction than a raw PCA average."
+          }
+        ]
+      },
+      {
+        id: "rotated-carryover",
+        name: "Rotational carryover",
+        description: "This is the new heading-aware behavior. Once the pattern becomes ambiguous, the resolver rotates the last trusted angle by the robot's heading change.",
+        seedState: {
+          previousResolvedAngle: 82,
+          hasPreviousResolvedAngle: true,
+          previousRobotHeadingDegrees: 0,
+          hasRobotHeadingReference: true
+        },
+        frames: [
+          {
+            heading: 20,
+            active: [2, 3, 18, 19, 34, 35],
+            note: "Three groups after a 20 degree robot rotation. The new resolver reuses history and rotates it instead of trusting this noisy snapshot."
+          },
+          {
+            heading: 35,
+            active: [1, 2, 17, 18, 33, 34],
+            note: "Ambiguity continues. The rotated carryover path keeps the angle moving with the robot rather than jumping between islands."
+          }
+        ]
+      },
+      {
+        id: "crossline-sparse",
+        name: "Sparse after crossing",
+        description: "This mirrors the 'count < 2 while crossLine is already true' rule. The new resolver holds onto the previous line direction; the old one snaps to a single active sensor.",
+        seedState: {
+          previousResolvedAngle: 300,
+          hasPreviousResolvedAngle: true,
+          previousRobotHeadingDegrees: 10,
+          hasRobotHeadingReference: true,
+          crossLine: true
+        },
+        frames: [
+          {
+            heading: 20,
+            active: [40],
+            note: "Only one sensor is active, but the system is already in a cross-line state. The new resolver keeps the previous line direction alive."
+          },
+          {
+            heading: 35,
+            active: [41],
+            note: "The sparse detection persists while the robot rotates. Carryover tracks that rotation instead of collapsing to a single-sensor centroid."
+          }
+        ]
+      }
+    ];
+
+    const scenarioSelect = document.getElementById("scenarioSelect");
+    const frameSlider = document.getElementById("frameSlider");
+    const prevFrameButton = document.getElementById("prevFrame");
+    const nextFrameButton = document.getElementById("nextFrame");
+    const showHelpersInput = document.getElementById("showHelpers");
+    const frameLabel = document.getElementById("frameLabel");
+    const scenarioDescription = document.getElementById("scenarioDescription");
+    const frameDescription = document.getElementById("frameDescription");
+    const deltaBanner = document.getElementById("deltaBanner");
+    const timelineStrip = document.getElementById("timelineStrip");
+
+    const oldSvg = document.getElementById("oldSvg");
+    const newSvg = document.getElementById("newSvg");
+    const oldAnglePill = document.getElementById("oldAnglePill");
+    const newAnglePill = document.getElementById("newAnglePill");
+    const oldChips = document.getElementById("oldChips");
+    const newChips = document.getElementById("newChips");
+    const oldMetrics = document.getElementById("oldMetrics");
+    const newMetrics = document.getElementById("newMetrics");
+
+    let scenarioIndex = 0;
+    let frameIndex = 0;
+
+    function normalize360(angle) {
+      let value = angle % 360;
+      if (value < 0) value += 360;
+      return value;
+    }
+
+    function wrapAngle(angle) {
+      let value = angle;
+      if (value < -180) value += 360;
+      if (value > 180) value -= 360;
+      return value;
+    }
+
+    function circularDistanceDegrees(a, b) {
+      const diff = Math.abs(normalize360(a) - normalize360(b));
+      return Math.min(diff, 360 - diff);
+    }
+
+    function headingDeltaDegrees(previousHeading, currentHeading) {
+      return wrapAngle(previousHeading - currentHeading);
+    }
+
+    function angleFromXY(x, y) {
+      return normalize360((Math.atan2(x, y) * 180) / Math.PI);
+    }
+
+    function centroidFor(active) {
+      if (!active.length) return null;
+      let x = 0;
+      let y = 0;
+      for (const index of active) {
+        x += POINTS[index][0];
+        y += POINTS[index][1];
+      }
+      return { x: x / active.length, y: y / active.length };
+    }
+
+    function chordLengthFor(centroid) {
+      if (!centroid) return NO_LINE;
+      const dist = Math.hypot(centroid.x, centroid.y);
+      return 1 - (dist / IDEAL_RING_RADIUS);
+    }
+
+    function countTriggeredGroups(activeSet) {
+      let groups = 0;
+      let previousTriggered = false;
+      for (let i = 0; i < POINTS.length; i++) {
+        const triggered = activeSet.has(i);
+        if (triggered && !previousTriggered) {
+          groups += 1;
+        }
+        previousTriggered = triggered;
+      }
+
+      if (groups > 1 && activeSet.has(0) && activeSet.has(POINTS.length - 1)) {
+        groups -= 1;
+      }
+      return groups;
+    }
+
+    function calculatePrincipalComponent(covXX, covXY, covYY) {
+      const trace = covXX + covYY;
+      const det = (covXX * covYY) - (covXY * covXY);
+      const discriminant = trace * trace - (4 * det);
+
+      if (discriminant < 0) {
+        return { x: 1, y: 0 };
+      }
+
+      const sqrtDiscriminant = Math.sqrt(discriminant);
+      const lambda1 = (trace + sqrtDiscriminant) / 2;
+      const lambda2 = (trace - sqrtDiscriminant) / 2;
+      const lambda = Math.abs(lambda1) > Math.abs(lambda2) ? lambda1 : lambda2;
+
+      let x = 1;
+      let y = 0;
+      const epsilon = 1e-6;
+      const aMinusLambda = covXX - lambda;
+
+      if (Math.abs(covXY) > epsilon) {
+        x = 1;
+        y = -aMinusLambda / covXY;
+      } else if (Math.abs(covYY - lambda) > epsilon) {
+        y = 1;
+        x = -covXY / (covYY - lambda);
+      }
+
+      const magnitude = Math.hypot(x, y);
+      return magnitude > epsilon ? { x: x / magnitude, y: y / magnitude } : { x: 1, y: 0 };
+    }
+
+    function resolvePcaAngle(active, centroid) {
+      if (!active.length || !centroid) {
+        return { angle: NO_LINE, method: "none" };
+      }
+
+      if (active.length === 1) {
+        return {
+          angle: angleFromXY(centroid.x, centroid.y),
+          method: "single sensor centroid"
+        };
+      }
+
+      let covXX = 0;
+      let covXY = 0;
+      let covYY = 0;
+      for (const index of active) {
+        const [px, py] = POINTS[index];
+        const dx = px - centroid.x;
+        const dy = py - centroid.y;
+        covXX += dx * dx;
+        covXY += dx * dy;
+        covYY += dy * dy;
+      }
+
+      covXX /= active.length;
+      covXY /= active.length;
+      covYY /= active.length;
+
+      const direction = calculatePrincipalComponent(covXX, covXY, covYY);
+      const directionMagSquared = direction.x * direction.x + direction.y * direction.y;
+      if (directionMagSquared <= 1e-6) {
+        return {
+          angle: angleFromXY(centroid.x, centroid.y),
+          method: "pca centroid fallback"
+        };
+      }
+
+      const projectionScale =
+        -((centroid.x * direction.x) + (centroid.y * direction.y)) / directionMagSquared;
+      const xIntersection = centroid.x + projectionScale * direction.x;
+      const yIntersection = centroid.y + projectionScale * direction.y;
+
+      if (Math.abs(xIntersection) <= 1e-6 && Math.abs(yIntersection) <= 1e-6) {
+        return {
+          angle: angleFromXY(centroid.x, centroid.y),
+          method: "pca centroid fallback"
+        };
+      }
+
+      return {
+        angle: angleFromXY(xIntersection, yIntersection),
+        method: "pca fit"
+      };
+    }
+
+    function buildOppositePairVector(active) {
+      if (active.length < 2) return null;
+
+      let bestI = -1;
+      let bestJ = -1;
+      let bestDot = 1;
+
+      for (let i = 0; i < active.length; i++) {
+        const a = POINTS[active[i]];
+        const magA = Math.hypot(a[0], a[1]);
+        const x1 = a[0] / magA;
+        const y1 = a[1] / magA;
+        for (let j = i + 1; j < active.length; j++) {
+          const b = POINTS[active[j]];
+          const magB = Math.hypot(b[0], b[1]);
+          const x2 = b[0] / magB;
+          const y2 = b[1] / magB;
+          const dot = x1 * x2 + y1 * y2;
+          if (dot < bestDot) {
+            bestDot = dot;
+            bestI = active[i];
+            bestJ = active[j];
+          }
+        }
+      }
+
+      if (bestI < 0 || bestJ < 0) return null;
+
+      const firstPoint = POINTS[bestI];
+      const secondPoint = POINTS[bestJ];
+      const magA = Math.hypot(firstPoint[0], firstPoint[1]);
+      const magB = Math.hypot(secondPoint[0], secondPoint[1]);
+      const vector = {
+        x: firstPoint[0] / magA + secondPoint[0] / magB,
+        y: firstPoint[1] / magA + secondPoint[1] / magB,
+        indices: [bestI, bestJ]
+      };
+
+      return Math.hypot(vector.x, vector.y) > 1e-6 ? vector : null;
+    }
+
+    function emptyState() {
+      return {
+        crossLine: false,
+        previousResolvedAngle: NO_LINE,
+        hasPreviousResolvedAngle: false,
+        previousRobotHeadingDegrees: 0,
+        hasRobotHeadingReference: false
+      };
+    }
+
+    function seededState(seed) {
+      return { ...emptyState(), ...(seed || {}) };
+    }
+
+    function resolveOld(frame) {
+      const active = [...frame.active];
+      const centroid = centroidFor(active);
+      const chordLength = chordLengthFor(centroid);
+      const activeSet = new Set(active);
+      const groups = countTriggeredGroups(activeSet);
+      const pca = resolvePcaAngle(active, centroid);
+      const oppositePairVector = buildOppositePairVector(active);
+      const oppositePairAngle = oppositePairVector ? angleFromXY(oppositePairVector.x, oppositePairVector.y) : NO_LINE;
+
+      return {
+        heading: frame.heading,
+        active,
+        groups,
+        centroid,
+        chordLength,
+        resolvedAngle: pca.angle,
+        method: pca.method,
+        pcaAngle: pca.angle,
+        oppositePairAngle,
+        oppositePairIndices: oppositePairVector ? oppositePairVector.indices : [],
+        rotatedPreviousAngle: NO_LINE,
+        carryoverUsed: false,
+        crossLine: false,
+        previousResolvedAngle: NO_LINE,
+        hasPreviousResolvedAngle: false
+      };
+    }
+
+    function resolveNew(frame, priorState) {
+      const active = [...frame.active];
+      const centroid = centroidFor(active);
+      const chordLength = chordLengthFor(centroid);
+      const activeSet = new Set(active);
+      const groups = countTriggeredGroups(activeSet);
+
+      const nextState = { ...priorState };
+
+      const canRotatePrevious =
+        priorState.hasPreviousResolvedAngle && priorState.hasRobotHeadingReference;
+      let rotatedPreviousAngle = priorState.previousResolvedAngle;
+      if (canRotatePrevious) {
+        rotatedPreviousAngle = normalize360(
+          priorState.previousResolvedAngle +
+          headingDeltaDegrees(priorState.previousRobotHeadingDegrees, frame.heading)
+        );
+      }
+
+      const reusePreviousAngle =
+        active.length < 2 && priorState.crossLine && priorState.hasPreviousResolvedAngle;
+      const ambiguousGroupedDetection =
+        groups === 3 && priorState.hasPreviousResolvedAngle;
+
+      let resolvedAngle = NO_LINE;
+      let method = "none";
+      let carryoverUsed = false;
+
+      const pca = resolvePcaAngle(active, centroid);
+      const oppositePairVector = buildOppositePairVector(active);
+      const oppositePairAngle = oppositePairVector ? angleFromXY(oppositePairVector.x, oppositePairVector.y) : NO_LINE;
+
+      if (reusePreviousAngle || ambiguousGroupedDetection) {
+        resolvedAngle = canRotatePrevious ? rotatedPreviousAngle : priorState.previousResolvedAngle;
+        method = canRotatePrevious ? "rotated previous angle" : "previous angle carryover";
+        carryoverUsed = true;
+      } else if (active.length > 0) {
+        if (pca.angle !== NO_LINE) {
+          resolvedAngle = pca.angle;
+          method = pca.method;
+        }
+
+        if (oppositePairVector && groups >= 2) {
+          if (resolvedAngle === NO_LINE || groups > 2) {
+            resolvedAngle = oppositePairAngle;
+            method = "opposite-pair fallback";
+          } else if (canRotatePrevious) {
+            const pairDistance = circularDistanceDegrees(oppositePairAngle, rotatedPreviousAngle);
+            const pcaDistance = circularDistanceDegrees(resolvedAngle, rotatedPreviousAngle);
+            if (pairDistance + 5 < pcaDistance) {
+              resolvedAngle = oppositePairAngle;
+              method = "opposite-pair near history";
+            }
+          } else if (groups === 2) {
+            resolvedAngle = oppositePairAngle;
+            method = "opposite-pair fallback";
+          }
+        }
+      }
+
+      if (resolvedAngle !== NO_LINE) {
+        nextState.previousResolvedAngle = normalize360(resolvedAngle);
+        nextState.hasPreviousResolvedAngle = true;
+      } else {
+        nextState.crossLine = false;
+        nextState.previousResolvedAngle = NO_LINE;
+        nextState.hasPreviousResolvedAngle = false;
+      }
+
+      if (typeof frame.crossLine === "boolean") {
+        nextState.crossLine = frame.crossLine;
+      }
+
+      nextState.previousRobotHeadingDegrees = frame.heading;
+      nextState.hasRobotHeadingReference = true;
+
+      return {
+        heading: frame.heading,
+        active,
+        groups,
+        centroid,
+        chordLength,
+        resolvedAngle: resolvedAngle !== NO_LINE ? normalize360(resolvedAngle) : NO_LINE,
+        method,
+        pcaAngle: pca.angle,
+        oppositePairAngle,
+        oppositePairIndices: oppositePairVector ? oppositePairVector.indices : [],
+        rotatedPreviousAngle: canRotatePrevious ? rotatedPreviousAngle : NO_LINE,
+        carryoverUsed,
+        crossLine: nextState.crossLine,
+        previousResolvedAngle: nextState.previousResolvedAngle,
+        hasPreviousResolvedAngle: nextState.hasPreviousResolvedAngle,
+        nextState
+      };
+    }
+
+    function formatAngle(angle) {
+      return angle === NO_LINE ? "N/A" : `${angle.toFixed(1)}°`;
+    }
+
+    function formatChord(chord) {
+      return chord === NO_LINE ? "N/A" : chord.toFixed(3);
+    }
+
+    function scenePoint(x, y) {
+      const scale = 1.52;
+      return {
+        x: 180 + x * scale,
+        y: 180 - y * scale
+      };
+    }
+
+    function angleLineEndpoints(centroid, angle) {
+      if (!centroid || angle === NO_LINE) return null;
+      const directionDeg = angle + 90;
+      const directionRad = directionDeg * Math.PI / 180;
+      const dx = Math.sin(directionRad);
+      const dy = Math.cos(directionRad);
+      const distance = 150;
+      return {
+        x1: centroid.x - dx * distance,
+        y1: centroid.y - dy * distance,
+        x2: centroid.x + dx * distance,
+        y2: centroid.y + dy * distance
+      };
+    }
+
+    function rayEndpoint(angle, length = 120) {
+      if (angle === NO_LINE) return null;
+      const rad = angle * Math.PI / 180;
+      return {
+        x: Math.sin(rad) * length,
+        y: Math.cos(rad) * length
+      };
+    }
+
+    function buildMetric(label, value) {
+      return `
+        <div class="metric">
+          <div class="metric-label">${label}</div>
+          <div class="metric-value">${value}</div>
+        </div>
+      `;
+    }
+
+    function chip(label, color) {
+      return `
+        <div class="chip">
+          <span class="dot" style="background:${color};"></span>
+          <span>${label}</span>
+        </div>
+      `;
+    }
+
+    function lineElement(x1, y1, x2, y2, color, width, dash = "", opacity = 1) {
+      const dashAttr = dash ? ` stroke-dasharray="${dash}"` : "";
+      return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${color}" stroke-width="${width}" stroke-linecap="round" opacity="${opacity}"${dashAttr}></line>`;
+    }
+
+    function textElement(x, y, text, color, size = 11, anchor = "middle") {
+      return `<text x="${x}" y="${y}" fill="${color}" font-size="${size}" font-family="var(--mono)" text-anchor="${anchor}">${text}</text>`;
+    }
+
+    function renderSvg(svg, result, title, showHelpers) {
+      const activeSet = new Set(result.active);
+      const centroidScene = result.centroid ? scenePoint(result.centroid.x, result.centroid.y) : null;
+      const pcaLine = (result.centroid && result.pcaAngle !== NO_LINE)
+        ? angleLineEndpoints(result.centroid, result.pcaAngle)
+        : null;
+      const resolvedLine = (result.centroid && result.resolvedAngle !== NO_LINE)
+        ? angleLineEndpoints(result.centroid, result.resolvedAngle)
+        : null;
+      const resolvedRay = rayEndpoint(result.resolvedAngle);
+      const pcaRay = rayEndpoint(result.pcaAngle);
+      const pairRay = rayEndpoint(result.oppositePairAngle);
+      const rotatedRay = rayEndpoint(result.rotatedPreviousAngle);
+
+      let markup = `
+        <defs>
+          <filter id="${title}-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="rgba(24,33,43,0.2)"></feDropShadow>
+          </filter>
+          <marker id="${title}-arrow-final" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--final)"></path>
+          </marker>
+          <marker id="${title}-arrow-carry" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--carry)"></path>
+          </marker>
+          <marker id="${title}-arrow-pair" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--pair)"></path>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="360" height="360" rx="18" fill="transparent"></rect>
+        <circle cx="180" cy="180" r="135" fill="none" stroke="var(--grid)" stroke-width="1.2"></circle>
+        <circle cx="180" cy="180" r="115" fill="none" stroke="var(--grid)" stroke-width="0.8" stroke-dasharray="4 7"></circle>
+        ${lineElement(30, 180, 330, 180, "var(--grid)", 1)}
+        ${lineElement(180, 30, 180, 330, "var(--grid)", 1)}
+      `;
+
+      if (showHelpers && pcaLine) {
+        const start = scenePoint(pcaLine.x1, pcaLine.y1);
+        const end = scenePoint(pcaLine.x2, pcaLine.y2);
+        markup += lineElement(start.x, start.y, end.x, end.y, "var(--pca)", 2.3, "7 7", 0.95);
+      }
+
+      if (showHelpers && pairRay) {
+        markup += lineElement(
+          180, 180,
+          180 + pairRay.x, 180 - pairRay.y,
+          "var(--pair)", 3, "8 8", 0.9
+        );
+      }
+
+      if (showHelpers && rotatedRay) {
+        markup += lineElement(
+          180, 180,
+          180 + rotatedRay.x, 180 - rotatedRay.y,
+          "var(--carry)", 3, "3 9", 0.92
+        );
+      }
+
+      if (resolvedLine) {
+        const start = scenePoint(resolvedLine.x1, resolvedLine.y1);
+        const end = scenePoint(resolvedLine.x2, resolvedLine.y2);
+        markup += lineElement(start.x, start.y, end.x, end.y, "var(--final)", 3.4, "", 0.95);
+      }
+
+      if (resolvedRay) {
+        markup += `<line x1="180" y1="180" x2="${(180 + resolvedRay.x).toFixed(2)}" y2="${(180 - resolvedRay.y).toFixed(2)}" stroke="var(--final)" stroke-width="4.5" marker-end="url(#${title}-arrow-final)" opacity="0.98"></line>`;
+      }
+
+      if (showHelpers && pcaRay) {
+        markup += lineElement(
+          180, 180,
+          180 + pcaRay.x * 0.88, 180 - pcaRay.y * 0.88,
+          "var(--pca)", 2.5, "10 6", 0.9
+        );
+      }
+
+      for (let i = 0; i < POINTS.length; i++) {
+        const [px, py] = POINTS[i];
+        const scene = scenePoint(px, py);
+        const isActive = activeSet.has(i);
+        markup += `<circle cx="${scene.x.toFixed(2)}" cy="${scene.y.toFixed(2)}" r="${isActive ? 6.8 : 4.2}" fill="${isActive ? "var(--sensor-active)" : "var(--sensor)"}" stroke="${isActive ? "var(--sensor-active-stroke)" : "rgba(24,33,43,0.15)"}" stroke-width="${isActive ? 1.6 : 0.8}"></circle>`;
+      }
+
+      if (showHelpers && result.oppositePairIndices.length === 2) {
+        for (const index of result.oppositePairIndices) {
+          const [px, py] = POINTS[index];
+          const scene = scenePoint(px, py);
+          markup += `<circle cx="${scene.x.toFixed(2)}" cy="${scene.y.toFixed(2)}" r="9.5" fill="none" stroke="var(--pair)" stroke-width="2.2" opacity="0.9"></circle>`;
+        }
+      }
+
+      if (centroidScene) {
+        markup += `<circle cx="${centroidScene.x.toFixed(2)}" cy="${centroidScene.y.toFixed(2)}" r="7.8" fill="var(--centroid)" stroke="#8a4b00" stroke-width="1.6" filter="url(#${title}-shadow)"></circle>`;
+      }
+
+      markup += `<circle cx="180" cy="180" r="5" fill="var(--ink)"></circle>`;
+      markup += textElement(180, 24, "Robot center", "var(--muted)", 10);
+      markup += textElement(180, 342, `Heading ${result.heading.toFixed(1)}°`, "var(--muted)", 11);
+
+      svg.innerHTML = markup;
+    }
+
+    function renderMetrics(containerChips, containerMetrics, result) {
+      const chips = [
+        chip(`Method: ${result.method}`, "var(--final)"),
+        chip(`Groups: ${result.groups}`, "var(--pca)"),
+        chip(`Active: ${result.active.length}`, "var(--sensor-active)")
+      ];
+
+      if (result.oppositePairAngle !== NO_LINE) {
+        chips.push(chip(`Pair: ${formatAngle(result.oppositePairAngle)}`, "var(--pair)"));
+      }
+
+      if (result.rotatedPreviousAngle !== NO_LINE) {
+        chips.push(chip(`Carry: ${formatAngle(result.rotatedPreviousAngle)}`, "var(--carry)"));
+      }
+
+      if (result.crossLine) {
+        chips.push(chip("crossLine = true", "var(--carry)"));
+      }
+
+      containerChips.innerHTML = chips.join("");
+
+      const centroidValue = result.centroid
+        ? `(${result.centroid.x.toFixed(1)}, ${result.centroid.y.toFixed(1)})`
+        : "N/A";
+
+      containerMetrics.innerHTML = [
+        buildMetric("Resolved angle", formatAngle(result.resolvedAngle)),
+        buildMetric("Chord estimate", formatChord(result.chordLength)),
+        buildMetric("PCA angle", formatAngle(result.pcaAngle)),
+        buildMetric("Centroid", centroidValue),
+        buildMetric("Opposite pair", formatAngle(result.oppositePairAngle)),
+        buildMetric("Heading", `${result.heading.toFixed(1)}°`)
+      ].join("");
+    }
+
+    function simulateScenario(scenario) {
+      const oldTimeline = [];
+      const newTimeline = [];
+      let state = seededState(scenario.seedState);
+
+      for (const frame of scenario.frames) {
+        const oldResult = resolveOld(frame);
+        const newResult = resolveNew(frame, state);
+        oldTimeline.push(oldResult);
+        newTimeline.push(newResult);
+        state = newResult.nextState;
+      }
+
+      return { oldTimeline, newTimeline };
+    }
+
+    function deltaText(oldResult, newResult) {
+      if (oldResult.resolvedAngle === NO_LINE && newResult.resolvedAngle === NO_LINE) {
+        return "Both resolvers report no line for this frame.";
+      }
+
+      if (oldResult.resolvedAngle === NO_LINE || newResult.resolvedAngle === NO_LINE) {
+        return `Old resolved ${formatAngle(oldResult.resolvedAngle)} while new resolved ${formatAngle(newResult.resolvedAngle)}.`;
+      }
+
+      const diff = circularDistanceDegrees(oldResult.resolvedAngle, newResult.resolvedAngle);
+      return `Angle difference: ${diff.toFixed(1)}°. Old used "${oldResult.method}", new used "${newResult.method}".`;
+    }
+
+    function renderTimeline(scenario, oldTimeline, newTimeline) {
+      timelineStrip.innerHTML = scenario.frames.map((frame, index) => {
+        const oldResult = oldTimeline[index];
+        const newResult = newTimeline[index];
+        const selectedClass = index === frameIndex ? "frame-card active" : "frame-card";
+        return `
+          <button class="${selectedClass}" type="button" data-frame-index="${index}">
+            <strong>Frame ${index + 1}</strong>
+            <span>Old: ${formatAngle(oldResult.resolvedAngle)} via ${oldResult.method}</span>
+            <span>New: ${formatAngle(newResult.resolvedAngle)} via ${newResult.method}</span>
+          </button>
+        `;
+      }).join("");
+
+      for (const button of timelineStrip.querySelectorAll("[data-frame-index]")) {
+        button.addEventListener("click", () => {
+          frameIndex = Number(button.dataset.frameIndex);
+          render();
+        });
+      }
+    }
+
+    function render() {
+      const scenario = SCENARIOS[scenarioIndex];
+      const { oldTimeline, newTimeline } = simulateScenario(scenario);
+      const oldResult = oldTimeline[frameIndex];
+      const newResult = newTimeline[frameIndex];
+      const frame = scenario.frames[frameIndex];
+      const showHelpers = showHelpersInput.checked;
+
+      frameSlider.max = String(scenario.frames.length - 1);
+      frameSlider.value = String(frameIndex);
+      frameLabel.textContent = `Frame ${frameIndex + 1} of ${scenario.frames.length}`;
+      scenarioDescription.textContent = scenario.description;
+      frameDescription.innerHTML = `<span class="summary-strong">What this frame is showing:</span> ${frame.note}`;
+      deltaBanner.textContent = deltaText(oldResult, newResult);
+
+      oldAnglePill.textContent = `Angle: ${formatAngle(oldResult.resolvedAngle)}`;
+      newAnglePill.textContent = `Angle: ${formatAngle(newResult.resolvedAngle)}`;
+
+      renderSvg(oldSvg, oldResult, "old", showHelpers);
+      renderSvg(newSvg, newResult, "new", showHelpers);
+      renderMetrics(oldChips, oldMetrics, oldResult);
+      renderMetrics(newChips, newMetrics, newResult);
+      renderTimeline(scenario, oldTimeline, newTimeline);
+
+      prevFrameButton.disabled = frameIndex === 0;
+      nextFrameButton.disabled = frameIndex === scenario.frames.length - 1;
+    }
+
+    function populateScenarioSelect() {
+      scenarioSelect.innerHTML = SCENARIOS.map((scenario, index) => (
+        `<option value="${index}">${scenario.name}</option>`
+      )).join("");
+      scenarioSelect.value = String(scenarioIndex);
+    }
+
+    scenarioSelect.addEventListener("change", () => {
+      scenarioIndex = Number(scenarioSelect.value);
+      frameIndex = 0;
+      render();
+    });
+
+    frameSlider.addEventListener("input", () => {
+      frameIndex = Number(frameSlider.value);
+      render();
+    });
+
+    prevFrameButton.addEventListener("click", () => {
+      frameIndex = Math.max(0, frameIndex - 1);
+      render();
+    });
+
+    nextFrameButton.addEventListener("click", () => {
+      const maxIndex = SCENARIOS[scenarioIndex].frames.length - 1;
+      frameIndex = Math.min(maxIndex, frameIndex + 1);
+      render();
+    });
+
+    showHelpersInput.addEventListener("change", render);
+
+    populateScenarioSelect();
+    render();
+  </script>
+</body>
+</html>

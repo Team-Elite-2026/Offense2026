@@ -1,9 +1,23 @@
 ﻿# Teensy Handoff — QuantumStrike Motion Pipeline
-*Last updated: 2026-06-08 (Session 7)*
+*Last updated: 2026-06-09 (Session 8)*
 
 ---
 
 ## Session History
+
+### Session 8 — Kicker and dribbler control signals added to ActionChunk
+
+- **Wire format**: Reused 2 of the 3 existing `_pad` bytes in the `ActionChunk` header. `kick` (offset 29) and `dribblerPower` (offset 30) replace `_pad[0..1]`; `_pad` is now 1 byte. Actions array still starts at offset 32 — struct size unchanged.
+- **Pi owns kick**: Removed the local `switches.lightgate() && fabs(goalAngle) < 5` kicker check from `main.cpp`. Pi sends `kick=1` in a chunk when `hasBall && latestDebug_.usedStrikePosePlan` (NormalStrike committed with ball secured). Dribbler runs at power 200/255 whenever offense is active, off when idle.
+- **Offense2026 new/modified files**:
+  - `Movement.h/.cpp` — added `static constexpr int DRIBBLER_PIN = -1` (TODO: assign), `setDribbler(uint8_t power)` method (`analogWrite` guarded by pin ≥ 0), and `analogWriteFrequency` + `pinMode` in constructor.
+  - `TrajectoryExecutor.h` — `ActionChunk._pad[3]` → `kick + dribblerPower + _pad(1B)`; added `#include <Movement.h>`, `Movement& movement_` member, updated constructor signature.
+  - `TrajectoryExecutor.cpp` — constructor takes `Movement& movement`; in `execute()` at chunk hot-swap: calls `movement_.kick()` if `chunk.kick`, then `movement_.setDribbler(chunk.dribblerPower)`.
+  - `main.cpp` — `TrajectoryExecutor` constructor now passes `movement`; local kicker block removed.
+- **BallAlgo (Pi) modified files**:
+  - `motion/Protocol.hpp` — `packActionChunk` signature gains `uint8_t kick = 0, uint8_t dribblerPower = 0`.
+  - `motion/Protocol.cpp` — writes `kick` and `dribblerPower` at offsets 29/30; `off += 1` (was `off += 3`).
+  - `motion/ActionChunkPublisher.cpp` — computes `kick`/`dribbler` after `debugPlan`; idle-stop path explicitly passes `0, 0`.
 
 ### Session 7 — LinePCB split: line sensors + mouse sensor moved to separate Teensy 4.0
 
@@ -71,8 +85,10 @@
 
 | File | Status |
 |------|--------|
-| `src/TrajectoryExecutor.h` | S7: SPI/PMW3389 code removed; `Serial3` for Pi; `setMouseVelocity()` added. S3–S5: telemetry, clock sync, Switch&. |
-| `src/TrajectoryExecutor.cpp` | S7: `Serial3` throughout; `initMouse`/`updateMouseVelocity`/`pmwRead`/`pmwWrite` removed; `setMouseVelocity()` added. |
+| `src/TrajectoryExecutor.h` | S8: `ActionChunk` gains `kick`+`dribblerPower`; `Movement&` added to constructor. S7: SPI/PMW3389 removed; `Serial3`; `setMouseVelocity()`. S3–S5: telemetry, clock sync, Switch&. |
+| `src/TrajectoryExecutor.cpp` | S8: constructor takes `Movement&`; chunk hot-swap fires `kick`/`setDribbler`. S7: `Serial3` throughout; SPI code removed. |
+| `src/Movement.h` | S8: `DRIBBLER_PIN = -1` TODO constant; `setDribbler(uint8_t)` declaration added. |
+| `src/Movement.cpp` | S8: `setDribbler()` implemented; dribbler `pinMode`+`analogWriteFrequency` in constructor. |
 | `src/LinePCBComm.h` | S7: new — `LinePCBComm` class, protocol types, parser |
 | `src/LinePCBComm.cpp` | S7: new — `update()`, `onPacket()`, `sendCommand()`, getters |
 | `src/LcdController.h` | S7: `LinePCBComm&` replaces `LineDetection&`. S6: full class. |
@@ -135,7 +151,9 @@ Offset  Size  Field
     20     4  vx_meas          float     — robot body-frame vx at planning time (m/s)
     24     4  vy_meas          float     — robot body-frame vy at planning time (m/s)
     28     1  pose_valid       uint8_t   — 1 if Pi's lidar pose was valid
-    29     3  _pad             uint8_t   — alignment
+    29     1  kick             uint8_t   — 1 = fire kicker when this chunk starts executing
+    30     1  dribblerPower    uint8_t   — 0–255 PWM dribbler power (0 = off)
+    31     1  _pad             uint8_t   — alignment
     32  24×N  actions[N]       GlobalAction × num_actions
 ```
 
@@ -196,24 +214,22 @@ measuredLatencyUs_ = (uint16_t)latency_us   ← saved for next telemetry packet
 
 ```cpp
 // Global:
-TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches);
+TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches, movement);
 
 // runOffense() call order:
-lineDetection.Calculate();
-// camera.CamCalc() REMOVED — Pi no longer sends ASCII camera data
-lineAngle  = lineDetection.getAngle();
-orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
-movement.kickBackground();
-trajectoryExecutor.processSerial();   // drain Serial2 + send ping/telemetry every loop
+movement.kickBackground();             // manage kicker solenoid hold/release
+trajectoryExecutor.processSerial();    // drain Serial3 + send ping/telemetry every loop
 
 if (!switches.start()) { movement.stop(); return; }
 if (lineAngle != -5) { /* line avoidance */ return; }
-if (switches.lightgate() && fabs(goalAngle) < 5) { movement.kick(); return; }
+// NOTE: local kicker check removed — Pi sends kick=1 in ActionChunk when NormalStrike+hasBall
 
 if (!trajectoryExecutor.execute()) {
     if (camera.ballAngle != -5) { movement.movement(...); }
     else { movement.stop(); }
 }
+// On chunk hot-swap, TrajectoryExecutor calls movement.kick() and movement.setDribbler()
+// based on the kick/dribblerPower fields stamped by the Pi.
 ```
 
 ---
@@ -222,6 +238,7 @@ if (!trajectoryExecutor.execute()) {
 
 | Priority | Item | Location | What to do |
 |----------|------|----------|------------|
+| High | Assign dribbler PWM pin | `src/Movement.h` `DRIBBLER_PIN = -1` | Set `DRIBBLER_PIN` to the Teensy 4.1 pin wired to the dribbler motor controller; verify PWM frequency (currently 20 kHz) suits the controller |
 | High | Wire mouse sensor CS pin | `LinePCBCode2026/src/LinePCBController.h` `MOUSE_CS_PIN = -1` | Set `MOUSE_CS_PIN` to the Teensy 4.0 pin wired to PMW3389 NCS; verify `MOUSE_CPI` formula; confirm dx=+right/dy=+forward |
 | High | Verify Pi serial wiring | Hardware | Pi TX → Teensy 4.1 **RX3** (pin 15); Pi RX ← Teensy 4.1 **TX3** (pin 14). Previously Serial2 pins 7/8. |
 | High | Wheel angles | `TrajectoryExecutor.cpp` `ALPHA_WHEEL[]` | Physically verify against mechanical drawing. Values FR=−0.6109, RR=+0.6109, RL=+2.5307, FL=−2.5307 rad — unconfirmed |

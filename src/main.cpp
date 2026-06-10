@@ -37,7 +37,7 @@ Orbit orbit(1);
 Cam camera;
 Defense defense;
 LinePCBComm linePCBComm(Serial2);  // Serial2: LinePCB Teensy 4.0 link (1 Mbaud)
-TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches);
+TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches, movement);
 
 RobotMode kRobotMode = RobotMode::Offense;
 LcdController lcdController(Serial8, linePCBComm, compassSensor, switches, movement, kRobotMode);
@@ -153,14 +153,6 @@ void runOffense()
     avoidanceAngle = linePCBComm.getAvoidanceAngle();
     Serial.println("Avoidance angle: " + String(avoidanceAngle));
     movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0, false);
-    return;
-  }
-
-  // Kicker: fire when ball is secure and we are aligned with the goal
-  // THIS WILL HAVE TO CHANGE
-  if (switches.lightgate() && fabs(goalAngle) < 5)
-  {
-    movement.kick();
     return;
   }
 

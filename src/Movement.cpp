@@ -12,6 +12,10 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
     myPID->SetOutputLimits(0, 100);
     myPID->SetSampleTime(2);
     pinMode(kickerPin, OUTPUT);
+    if (DRIBBLER_PIN >= 0) {
+        analogWriteFrequency(DRIBBLER_PIN, 20000);
+        pinMode(DRIBBLER_PIN, OUTPUT);
+    }
 }
 
 double Movement::findCorrectionRelZero(double goalDirection) {
@@ -166,6 +170,10 @@ void Movement::kickBackground()
     {
         digitalWrite(kickerPin, LOW);
     }
+}
+
+void Movement::setDribbler(uint8_t power) {
+    if (DRIBBLER_PIN >= 0) analogWrite(DRIBBLER_PIN, power);
 }
 
 void Movement::stop() {

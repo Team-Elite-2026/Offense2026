@@ -1,4 +1,5 @@
 ﻿#include <TrajectoryExecutor.h>
+#include <Movement.h>
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -27,8 +28,8 @@ static constexpr float kA = 0.17f;  // VÂ·sÂ²/rad â€“ inertia coefficie
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 TrajectoryExecutor::TrajectoryExecutor(Motor& FL, Motor& FR, Motor& BL, Motor& BR,
-                                       CompassSensor& imu, Switch& sw)
-    : FLMotor(FL), FRMotor(FR), BLMotor(BL), BRMotor(BR), imu(imu), sw(sw)
+                                       CompassSensor& imu, Switch& sw, Movement& movement)
+    : FLMotor(FL), FRMotor(FR), BLMotor(BL), BRMotor(BR), imu(imu), sw(sw), movement_(movement)
 {
     memset(&active_chunk, 0, sizeof(active_chunk));
     memset(&queued_chunk, 0, sizeof(queued_chunk));
@@ -254,6 +255,9 @@ bool TrajectoryExecutor::execute() {
             t_start_active_us = t_start_queued_us;
             has_queued_chunk  = false;
             is_first_chunk    = false;
+            // Apply actuator commands stamped on this chunk by the Pi.
+            if (active_chunk.kick) movement_.kick();
+            movement_.setDribbler(active_chunk.dribblerPower);
         }
     }
 

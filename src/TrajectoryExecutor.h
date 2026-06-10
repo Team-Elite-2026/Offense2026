@@ -5,6 +5,7 @@
 #include <Switches.h>
 #include <Motor.h>
 #include <CompassSensor.h>
+#include <Movement.h>
 
 // Mouse velocity is now supplied externally via setMouseVelocity() from LinePCBComm.
 
@@ -21,10 +22,10 @@ struct GlobalAction {
     float alpha;      // rad/sÂ², feedforward
 };
 
-// Wire layout matches Pi's packActionChunk exactly (Protocol.cpp):
+// Wire layout matches Pi’s packActionChunk exactly (Protocol.cpp):
 //   [trajectory_id 8][start_time_pi 8][dt_ms 2][num_actions 2]
-//   [vx_meas 4][vy_meas 4][pose_valid 1][_pad 3]
-//   [actions[50] Ã— 24]  â†’  total 1232 bytes
+//   [vx_meas 4][vy_meas 4][pose_valid 1][kick 1][dribblerPower 1][_pad 1]
+//   [actions[50] × 24]  →  total 1232 bytes
 struct ActionChunk {
     uint64_t     trajectory_id;
     uint64_t     start_time_pi;  // Pi absolute timestamp (Âµs) for actions[0]
@@ -33,7 +34,9 @@ struct ActionChunk {
     float        vx_meas;        // robot body-frame measured velocity at planning time (m/s)
     float        vy_meas;
     uint8_t      pose_valid;     // 1 = Pi's lidar pose was valid when this chunk was planned
-    uint8_t      _pad[3];        // alignment â€“ matches Pi padding in packActionChunk
+    uint8_t      kick;           // 1 = fire kicker when this chunk starts executing
+    uint8_t      dribblerPower;  // 0-255 PWM dribbler power (0 = off)
+    uint8_t      _pad;           // alignment — matches Pi padding in packActionChunk
     GlobalAction actions[50];    // max 50 = kChunkMaxActions in Pi config
 };
 
@@ -92,7 +95,7 @@ static constexpr uint32_t TELEMETRY_INTERVAL_MS = 10;  // 100 Hz odometry stream
 class TrajectoryExecutor {
 public:
     TrajectoryExecutor(Motor& FL, Motor& FR, Motor& BL, Motor& BR,
-                       CompassSensor& imu, Switch& sw);
+                       CompassSensor& imu, Switch& sw, Movement& movement);
 
     // Drain Serial3 (Pi link), run the packet framing state machine, and send a
     // clock-sync ping every PING_INTERVAL_MS.  Must be called every loop iteration.
@@ -122,7 +125,8 @@ private:
     Motor&         BLMotor;
     Motor&         BRMotor;
     CompassSensor& imu;
-    Switch&         sw;
+    Switch&        sw;
+    Movement&      movement_;
 
     // â”€â”€ Trajectory double-buffer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ActionChunk active_chunk;

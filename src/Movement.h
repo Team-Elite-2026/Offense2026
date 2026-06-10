@@ -22,6 +22,8 @@ private:
     int kickerPin = 30;
     int kickHold = 1000;
 
+    // TODO: assign to the Teensy 4.1 PWM pin wired to the dribbler motor controller.
+    static constexpr int DRIBBLER_PIN = -1;
 
 public:
     Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor);
@@ -35,6 +37,7 @@ public:
     void stop();
     void kick();
     void kickBackground();
+    void setDribbler(uint8_t power);
 
 
     double kp = 0.6;

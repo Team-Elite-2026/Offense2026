@@ -21,6 +21,8 @@
       --pca: #2563eb;
       --pair: #b83280;
       --carry: #c47e00;
+      --actual-line: #475569;
+      --actual-line-band: rgba(71, 85, 105, 0.22);
       --card-shadow: 0 18px 40px rgba(24, 33, 43, 0.12);
       --radius: 24px;
       --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -424,9 +426,9 @@
       <h1>Line Detection State Visualizer</h1>
       <p>
         This page uses the real 48-sensor ring geometry from <code>src/LineDetection.cpp</code>
-        to compare the old PCA-only angle resolver against the new stateful resolver. It highlights
-        when the new code stays on PCA, when it switches to the opposite-pair fallback, and when it
-        rotates the previously trusted angle through ambiguous sensor patterns.
+        to compare the old PCA-only angle resolver against the new stateful resolver. The dark band is
+        the real field line on the floor, and the red sensors are calculated from that line instead of
+        being hand-picked, so you can see exactly where the robot would be touching the boundary.
       </p>
     </section>
 
@@ -465,9 +467,9 @@
         <div class="card-header">
           <div>
             <h2>Old Resolver</h2>
-            <p>PCA or single-sensor centroid only. No grouped-pattern logic and no heading-aware carryover.</p>
+            <p>Looks only at the current hits, then drives straight away from the detected line.</p>
           </div>
-          <div id="oldAnglePill" class="angle-pill">Angle: N/A</div>
+          <div id="oldAnglePill" class="angle-pill">Move: N/A</div>
         </div>
         <div class="viz-shell">
           <svg id="oldSvg" viewBox="0 0 360 360" aria-label="Old resolver visual"></svg>
@@ -482,9 +484,9 @@
         <div class="card-header">
           <div>
             <h2>New Resolver</h2>
-            <p>Matches the current stateful logic: grouped-trigger analysis, opposite-pair fallback, and rotated history carryover.</p>
+            <p>Matches the current stateful logic: grouped triggers, rotated history, and cross-line recovery.</p>
           </div>
-          <div id="newAnglePill" class="angle-pill">Angle: N/A</div>
+          <div id="newAnglePill" class="angle-pill">Move: N/A</div>
         </div>
         <div class="viz-shell">
           <svg id="newSvg" viewBox="0 0 360 360" aria-label="New resolver visual"></svg>
@@ -499,9 +501,10 @@
     <section class="legend">
       <div class="summary-strong">Legend</div>
       <div class="legend-row">
+        <div class="legend-item"><span class="swatch" style="color: var(--actual-line);"></span>Actual field line</div>
         <div class="legend-item"><span class="swatch dot" style="color: var(--sensor-active);"></span>Active sensor</div>
         <div class="legend-item"><span class="swatch dot" style="color: var(--centroid);"></span>Centroid</div>
-        <div class="legend-item"><span class="swatch" style="color: var(--final);"></span>Resolved angle ray</div>
+        <div class="legend-item"><span class="swatch" style="color: var(--final);"></span>Final move direction</div>
         <div class="legend-item"><span class="swatch" style="color: var(--pca);"></span>PCA line fit</div>
         <div class="legend-item"><span class="swatch" style="color: var(--pair);"></span>Opposite-pair helper</div>
         <div class="legend-item"><span class="swatch" style="color: var(--carry);"></span>Rotated previous angle</div>
@@ -531,94 +534,76 @@
     ];
 
     const IDEAL_RING_RADIUS = 89.0;
+    const SCENE_SCALE = 1.52;
     const NO_LINE = -5.0;
 
     const SCENARIOS = [
       {
-        id: "clean-arc",
-        name: "Clean contiguous edge",
-        description: "A simple moving arc. Both versions should agree, which helps establish the baseline before the weird cases.",
+        id: "straight-return",
+        name: "Pushed over the line",
+        description: "A straight push across the boundary. The line stays behind the robot, so both versions should drive almost straight away from it.",
         seedState: {},
         frames: [
           {
             heading: 0,
-            active: [34, 35, 36, 37, 38, 39],
-            note: "Six adjacent sensors produce one clean island, so PCA is the right answer."
+            fieldLine: { point: [0, -74], normalAngle: 180, width: 14 },
+            note: "The dark band is touching the back of the ring, so only the rear sensors light up."
           },
           {
-            heading: 10,
-            active: [35, 36, 37, 38, 39, 40],
-            note: "The arc shifts smoothly around the ring. The new logic stays on PCA instead of forcing a fallback."
+            heading: 0,
+            fieldLine: { point: [0, -66], normalAngle: 180, width: 14 },
+            note: "The robot is farther over the line, so the hit sensors slide a little farther around the back edge."
           },
           {
-            heading: 20,
-            active: [36, 37, 38, 39, 40, 41],
-            note: "Still a single contiguous island. Both resolvers remain effectively identical."
+            heading: 0,
+            fieldLine: { point: [0, -58], normalAngle: 180, width: 14 },
+            note: "The line is still behind the robot, so the recovery direction stays almost straight forward."
           }
         ]
       },
       {
-        id: "fragmented-groups",
-        name: "Fragmented sensor islands",
-        description: "This synthetic pattern breaks the ring into multiple islands. The old code still trusts PCA; the new code can switch to the opposite-pair path.",
+        id: "twist-return",
+        name: "Pushed and rotated",
+        description: "This mirrors the twist case from the video. One real diagonal line hits separated sensor islands, so the new resolver can rotate the last trusted answer instead of trusting a messy snapshot.",
         seedState: {},
         frames: [
           {
             heading: 0,
-            active: [4, 5, 6, 19, 20, 33, 34],
-            note: "Three separate islands are active at once. The stateful resolver treats that as fragmented geometry and uses the most-opposed pair."
+            fieldLine: { point: [0, -74], normalAngle: 180, width: 14 },
+            note: "Start with a normal rear-line contact so the resolver has one trusted direction."
           },
           {
-            heading: 8,
-            active: [5, 6, 7, 20, 21, 34, 35],
-            note: "The fragmented pattern moves slightly, but the opposite-pair logic still gives a more deliberate direction than a raw PCA average."
+            heading: 50,
+            fieldLine: { point: [42, -50], normalAngle: 130, width: 14 },
+            note: "After the twist, one real diagonal line now touches three separated parts of the ring. The new resolver rotates the previous answer instead of trusting this frame."
+          },
+          {
+            heading: 50,
+            fieldLine: { point: [58, -26], normalAngle: 95, width: 14 },
+            note: "As the robot keeps turning, the line moves toward the right side and the resolver settles back onto the fresh geometry."
           }
         ]
       },
       {
-        id: "rotated-carryover",
-        name: "Rotational carryover",
-        description: "This is the new heading-aware behavior. Once the pattern becomes ambiguous, the resolver rotates the last trusted angle by the robot's heading change.",
-        seedState: {
-          previousResolvedAngle: 82,
-          hasPreviousResolvedAngle: true,
-          previousRobotHeadingDegrees: 0,
-          hasRobotHeadingReference: true
-        },
+        id: "flip-180",
+        name: "Pushed, spun 180, then recover",
+        description: "This is the hard case from your video. The line moves from the back of the robot to the front after the spin, and the new logic flips into cross-line recovery so it comes back over the boundary.",
+        seedState: {},
         frames: [
           {
-            heading: 20,
-            active: [2, 3, 18, 19, 34, 35],
-            note: "Three groups after a 20 degree robot rotation. The new resolver reuses history and rotates it instead of trusting this noisy snapshot."
+            heading: 0,
+            fieldLine: { point: [0, -74], normalAngle: 180, width: 14 },
+            note: "Before the spin, the line is behind the robot, so the normal 'drive away from line' direction points forward."
           },
           {
-            heading: 35,
-            active: [1, 2, 17, 18, 33, 34],
-            note: "Ambiguity continues. The rotated carryover path keeps the angle moving with the robot rather than jumping between islands."
-          }
-        ]
-      },
-      {
-        id: "crossline-sparse",
-        name: "Sparse after crossing",
-        description: "This mirrors the 'count < 2 while crossLine is already true' rule. The new resolver holds onto the previous line direction; the old one snaps to a single active sensor.",
-        seedState: {
-          previousResolvedAngle: 300,
-          hasPreviousResolvedAngle: true,
-          previousRobotHeadingDegrees: 10,
-          hasRobotHeadingReference: true,
-          crossLine: true
-        },
-        frames: [
-          {
-            heading: 20,
-            active: [40],
-            note: "Only one sensor is active, but the system is already in a cross-line state. The new resolver keeps the previous line direction alive."
+            heading: 180,
+            fieldLine: { point: [0, 74], normalAngle: 0, width: 14 },
+            note: "After being pushed over and spun around, the line is now in front. The new resolver flips cross-line recovery on, so it drives back through the line instead of farther away."
           },
           {
-            heading: 35,
-            active: [41],
-            note: "The sparse detection persists while the robot rotates. Carryover tracks that rotation instead of collapsing to a single-sensor centroid."
+            heading: 180,
+            fieldLine: { point: [20, 82], normalAngle: 5, width: 10 },
+            note: "Only one front-right sensor still sees the line. The new resolver keeps the last trusted line angle alive, while the old one snaps to that single sensor."
           }
         ]
       }
@@ -839,6 +824,8 @@
         crossLine: false,
         previousResolvedAngle: NO_LINE,
         hasPreviousResolvedAngle: false,
+        previousBaseAvoidanceAngle: NO_LINE,
+        hasPreviousBaseAvoidanceAngle: false,
         previousRobotHeadingDegrees: 0,
         hasRobotHeadingReference: false
       };
@@ -848,8 +835,60 @@
       return { ...emptyState(), ...(seed || {}) };
     }
 
+    function unitVectorForAngle(angle) {
+      const rad = angle * Math.PI / 180;
+      return {
+        x: Math.sin(rad),
+        y: Math.cos(rad)
+      };
+    }
+
+    function fieldLineGeometryForFrame(frame) {
+      if (!frame.fieldLine) return null;
+
+      const normalAngle = normalize360(frame.fieldLine.normalAngle);
+      const normal = unitVectorForAngle(normalAngle);
+      return {
+        point: {
+          x: frame.fieldLine.point[0],
+          y: frame.fieldLine.point[1]
+        },
+        normal,
+        tangent: {
+          x: normal.y,
+          y: -normal.x
+        },
+        normalAngle,
+        drawWidth: frame.fieldLine.width ?? 14,
+        activationWidth: frame.fieldLine.activationWidth ?? frame.fieldLine.width ?? 14,
+        length: frame.fieldLine.length ?? 240
+      };
+    }
+
+    function activeSensorsForFrame(frame) {
+      if (Array.isArray(frame.active)) {
+        return [...frame.active];
+      }
+
+      const line = fieldLineGeometryForFrame(frame);
+      if (!line) return [];
+
+      const halfWidth = line.activationWidth / 2;
+      const active = [];
+      for (let i = 0; i < POINTS.length; i++) {
+        const [x, y] = POINTS[i];
+        const signedDistance =
+          ((x - line.point.x) * line.normal.x) +
+          ((y - line.point.y) * line.normal.y);
+        if (Math.abs(signedDistance) <= halfWidth) {
+          active.push(i);
+        }
+      }
+      return active;
+    }
+
     function resolveOld(frame) {
-      const active = [...frame.active];
+      const active = activeSensorsForFrame(frame);
       const centroid = centroidFor(active);
       const chordLength = chordLengthFor(centroid);
       const activeSet = new Set(active);
@@ -857,6 +896,8 @@
       const pca = resolvePcaAngle(active, centroid);
       const oppositePairVector = buildOppositePairVector(active);
       const oppositePairAngle = oppositePairVector ? angleFromXY(oppositePairVector.x, oppositePairVector.y) : NO_LINE;
+      const resolvedAngle = pca.angle !== NO_LINE ? normalize360(pca.angle) : NO_LINE;
+      const baseAvoidanceAngle = resolvedAngle !== NO_LINE ? normalize360(resolvedAngle + 180) : NO_LINE;
 
       return {
         heading: frame.heading,
@@ -864,7 +905,9 @@
         groups,
         centroid,
         chordLength,
-        resolvedAngle: pca.angle,
+        resolvedAngle,
+        moveAngle: baseAvoidanceAngle,
+        baseAvoidanceAngle,
         method: pca.method,
         pcaAngle: pca.angle,
         oppositePairAngle,
@@ -872,13 +915,14 @@
         rotatedPreviousAngle: NO_LINE,
         carryoverUsed: false,
         crossLine: false,
+        actualLineNormal: frame.fieldLine ? normalize360(frame.fieldLine.normalAngle) : NO_LINE,
         previousResolvedAngle: NO_LINE,
         hasPreviousResolvedAngle: false
       };
     }
 
     function resolveNew(frame, priorState) {
-      const active = [...frame.active];
+      const active = activeSensorsForFrame(frame);
       const centroid = centroidFor(active);
       const chordLength = chordLengthFor(centroid);
       const activeSet = new Set(active);
@@ -902,6 +946,8 @@
         groups === 3 && priorState.hasPreviousResolvedAngle;
 
       let resolvedAngle = NO_LINE;
+      let moveAngle = NO_LINE;
+      let baseAvoidanceAngle = NO_LINE;
       let method = "none";
       let carryoverUsed = false;
 
@@ -938,16 +984,33 @@
       }
 
       if (resolvedAngle !== NO_LINE) {
-        nextState.previousResolvedAngle = normalize360(resolvedAngle);
+        resolvedAngle = normalize360(resolvedAngle);
+        nextState.previousResolvedAngle = resolvedAngle;
         nextState.hasPreviousResolvedAngle = true;
+
+        const hasReliableBaseDirection =
+          active.length >= 2 && !reusePreviousAngle && !ambiguousGroupedDetection;
+        baseAvoidanceAngle = normalize360(resolvedAngle + 180);
+
+        if (hasReliableBaseDirection) {
+          if (
+            nextState.hasPreviousBaseAvoidanceAngle &&
+            circularDistanceDegrees(baseAvoidanceAngle, nextState.previousBaseAvoidanceAngle) > 90
+          ) {
+            nextState.crossLine = !nextState.crossLine;
+          }
+
+          nextState.previousBaseAvoidanceAngle = baseAvoidanceAngle;
+          nextState.hasPreviousBaseAvoidanceAngle = true;
+        }
+
+        moveAngle = nextState.crossLine ? resolvedAngle : baseAvoidanceAngle;
       } else {
         nextState.crossLine = false;
         nextState.previousResolvedAngle = NO_LINE;
         nextState.hasPreviousResolvedAngle = false;
-      }
-
-      if (typeof frame.crossLine === "boolean") {
-        nextState.crossLine = frame.crossLine;
+        nextState.previousBaseAvoidanceAngle = NO_LINE;
+        nextState.hasPreviousBaseAvoidanceAngle = false;
       }
 
       nextState.previousRobotHeadingDegrees = frame.heading;
@@ -959,7 +1022,9 @@
         groups,
         centroid,
         chordLength,
-        resolvedAngle: resolvedAngle !== NO_LINE ? normalize360(resolvedAngle) : NO_LINE,
+        resolvedAngle,
+        moveAngle,
+        baseAvoidanceAngle,
         method,
         pcaAngle: pca.angle,
         oppositePairAngle,
@@ -967,6 +1032,7 @@
         rotatedPreviousAngle: canRotatePrevious ? rotatedPreviousAngle : NO_LINE,
         carryoverUsed,
         crossLine: nextState.crossLine,
+        actualLineNormal: frame.fieldLine ? normalize360(frame.fieldLine.normalAngle) : NO_LINE,
         previousResolvedAngle: nextState.previousResolvedAngle,
         hasPreviousResolvedAngle: nextState.hasPreviousResolvedAngle,
         nextState
@@ -982,10 +1048,9 @@
     }
 
     function scenePoint(x, y) {
-      const scale = 1.52;
       return {
-        x: 180 + x * scale,
-        y: 180 - y * scale
+        x: 180 + x * SCENE_SCALE,
+        y: 180 - y * SCENE_SCALE
       };
     }
 
@@ -1040,16 +1105,14 @@
       return `<text x="${x}" y="${y}" fill="${color}" font-size="${size}" font-family="var(--mono)" text-anchor="${anchor}">${text}</text>`;
     }
 
-    function renderSvg(svg, result, title, showHelpers) {
+    function renderSvg(svg, result, frame, title, showHelpers) {
       const activeSet = new Set(result.active);
       const centroidScene = result.centroid ? scenePoint(result.centroid.x, result.centroid.y) : null;
+      const fieldLine = fieldLineGeometryForFrame(frame);
       const pcaLine = (result.centroid && result.pcaAngle !== NO_LINE)
         ? angleLineEndpoints(result.centroid, result.pcaAngle)
         : null;
-      const resolvedLine = (result.centroid && result.resolvedAngle !== NO_LINE)
-        ? angleLineEndpoints(result.centroid, result.resolvedAngle)
-        : null;
-      const resolvedRay = rayEndpoint(result.resolvedAngle);
+      const resolvedRay = rayEndpoint(result.moveAngle);
       const pcaRay = rayEndpoint(result.pcaAngle);
       const pairRay = rayEndpoint(result.oppositePairAngle);
       const rotatedRay = rayEndpoint(result.rotatedPreviousAngle);
@@ -1075,6 +1138,27 @@
         ${lineElement(30, 180, 330, 180, "var(--grid)", 1)}
         ${lineElement(180, 30, 180, 330, "var(--grid)", 1)}
       `;
+
+      if (fieldLine) {
+        const halfLength = fieldLine.length / 2;
+        const lineStart = scenePoint(
+          fieldLine.point.x - fieldLine.tangent.x * halfLength,
+          fieldLine.point.y - fieldLine.tangent.y * halfLength
+        );
+        const lineEnd = scenePoint(
+          fieldLine.point.x + fieldLine.tangent.x * halfLength,
+          fieldLine.point.y + fieldLine.tangent.y * halfLength
+        );
+
+        markup += lineElement(
+          lineStart.x, lineStart.y, lineEnd.x, lineEnd.y,
+          "var(--actual-line-band)", fieldLine.drawWidth * SCENE_SCALE, "", 1
+        );
+        markup += lineElement(
+          lineStart.x, lineStart.y, lineEnd.x, lineEnd.y,
+          "var(--actual-line)", 2.8, "", 0.95
+        );
+      }
 
       if (showHelpers && pcaLine) {
         const start = scenePoint(pcaLine.x1, pcaLine.y1);

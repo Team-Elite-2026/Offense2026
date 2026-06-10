@@ -86,7 +86,7 @@ void LcdController::sendTelemetry(double lineAngle, double avoidanceAngle)
   state.lastTelemetryMs = now;
 
   printLine(isGoalBlueSelected() ? "blue goal" : "yellow goal");
-  printLine("Mode: " + String(robotModeToken(_robotMode)));
+  printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(_robotMode) : "AUTO"));
   printLine(String("Light Gate: ") + (_switches.lightgate() ? "BLOCKED" : "CLEAR"));
   printLine("Battery: -1");
   printLine(state.lineCalibrationActive ? "Calibrating" : "Line Cal: IDLE");

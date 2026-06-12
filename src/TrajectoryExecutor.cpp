@@ -370,8 +370,9 @@ float TrajectoryExecutor::soft_sign(float w, float epsilon) {
 }
 
 float TrajectoryExecutor::readBatteryVoltage() {
-    // TODO: analogRead(BATT_ADC_PIN) * (3.3f / 1023.0f) * DIVIDER_RATIO
-    return 12.0f;
+    // Read the battery voltage from the ADC pin.
+    return analogRead(BATT_ADC_PIN) * (3.3f / 1023.0f) * DIVIDER_RATIO;
+    
 }
 
 float TrajectoryExecutor::readMouseVx() { return vxMouseMs_; }

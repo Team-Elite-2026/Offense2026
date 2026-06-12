@@ -152,6 +152,9 @@ private:
     bool goalIsBlue_ = true;
     uint8_t modeOverride_ = 0;
 
+    int BATT_ADC_PIN = 17;
+    int DIVIDER_RATIO = (30000 + 7500) / 7500
+
     // â”€â”€ Serial parse state machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     enum class ParseState : uint8_t {
         MAGIC,    // match 4 magic bytes (uses magic_idx)

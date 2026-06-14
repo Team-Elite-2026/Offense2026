@@ -3,8 +3,6 @@
 #include <Switches.h>
 #include <Callibration.h>
 #include <Movement.h>
-#include <orbit.h>
-#include <Cam.h>
 #include <Defense.h>
 #include <trig.h>
 #include <string.h>
@@ -33,8 +31,6 @@ Motor FR(pincontrolFRA, pincontrolFRB, pinspeedFR);
 Motor BL(pincontrolRLA, pincontrolRLB, pinspeedRL);
 Motor BR(pincontrolRRA, pincontrolRRB, pinspeedRR);
 Movement movement(FL, FR, BL, BR, compassSensor);
-Orbit orbit(1);
-Cam camera;
 Defense defense;
 LinePCBComm linePCBComm(Serial2);  // Serial2: LinePCB Teensy 4.0 link (1 Mbaud)
 TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches, movement);
@@ -42,20 +38,8 @@ TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches, m
 RobotMode kRobotMode = RobotMode::Offense;
 LcdController lcdController(Serial8, linePCBComm, compassSensor, switches, movement, kRobotMode);
 
-double defenseSpeedFactor = 0.26;
-double offenseSpeedFactor = 0.22;
 double lineAvoidanceSpeed = 0.15;
-double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
-bool aimingGoal;
-
-double getHomeGoalAngle()
-{
-  if (lcdController.isGoalBlueSelected())
-  {
-    return camera.yellowGoal;
-  }
-  return camera.blueGoal;
-}
+double lineAngle, avoidanceAngle;
 
 bool runRequestedCalibration()
 {
@@ -91,108 +75,32 @@ void setup()
   compassSensor.callibrate();
 }
 
-void runOffense()
+// The Pi owns ALL motion planning for both roles and streams ready-to-execute
+// action chunks. The role (offense/defense) is decided entirely on the Pi from
+// the LCD selection relayed in telemetry, so the Teensy is role-agnostic: it
+// executes whatever chunks arrive, with line avoidance as the top-priority
+// safety override. Switching a robot's role mid-match is therefore just the Pi
+// changing which chunks it sends — no Teensy-side change.
+void runRobot()
 {
   avoidanceAngle = -5;
   if (runRequestedCalibration())
   {
     movement.stop();
-    calibration.calibrateCompassSensor();
-    Serial.println("Calibrating");
     return;
   }
 
-  // Serial.println("Testing Line Sensors");
-  camera.CamCalc();
   lineAngle = linePCBComm.getLineAngle();
-  orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
-  if (lcdController.isGoalBlueSelected())
+  if (lineAngle != -5)
   {
-    Serial.println("blue goal");
-    goalAngle = camera.blueGoal;
+    avoidanceAngle = linePCBComm.getAvoidanceAngle();
   }
-  else
-  {
-    Serial.println("yellow goal");
-    goalAngle = camera.yellowGoal;
-  }
-
-  if (goalAngle == -5)
-  {
-    goalAngle  = 0;
-    aimingGoal = false;
-  }
-  else
-  {
-    aimingGoal = true;
-  }
-
-  Serial.println("Line Angle: "        + String(lineAngle));
-  Serial.println("Robot Angle: "       + String(orbitAngle));
-  Serial.println("Ball Angle: "        + String(camera.ballAngle));
-  Serial.println("Goal Angle: "        + String(goalAngle));
-  Serial.println("Ball dist: "         + String(camera.ballDist));
-  Serial.println("Zeroed angle: "      + String(compassSensor.currentOffset()));
-  Serial.println("Orientation angle: " + String(compassSensor.getOrientation()));
 
   movement.kickBackground();
 
-  // Always drain Serial3 so no trajectory packets are silently dropped,
-  // even when line avoidance overrides movement this iteration.
+  // Single owner of the Pi link (Serial3): drain it and run the chunk/pong
+  // framing state machine every loop so no packets are dropped.
   trajectoryExecutor.processSerial();
-
-  if (!lcdController.isStartEnabled())
-  {
-    movement.stop();
-    return;
-  }
-
-  // Line avoidance — highest-priority safety override
-  if (lineAngle != -5)
-  {
-    avoidanceAngle = linePCBComm.getAvoidanceAngle();
-    Serial.println("Avoidance angle: " + String(avoidanceAngle));
-    movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0, false);
-    return;
-  }
-
-  // Trajectory execution (Pipeline.md Steps 7-8)
-  if (!trajectoryExecutor.execute())
-  {
-    if (camera.ballAngle != -5)
-    {
-      movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal);
-    }
-    else
-    {
-      movement.stop();
-    }
-  }
-}
-
-void runDefense()
-{
-  avoidanceAngle = -5;
-  if (runRequestedCalibration())
-  {
-    return;
-  }
-
-  lineAngle = linePCBComm.getLineAngle();
-  maxChordLength = linePCBComm.getChordLength();
-  if (lineAngle != -5)
-  {
-    avoidanceAngle = linePCBComm.getAvoidanceAngle();
-    Serial.println("Avoidance Angle: " + String(avoidanceAngle));
-  }
-  bool crossLineState = linePCBComm.getCrossLine();
-
-  double homeGoalAngle = getHomeGoalAngle();
-  movement.kickBackground();
-
-  currentOffset = compassSensor.currentOffset();
-
-  Serial.println("BALL DISTANCE: " + String(camera.ballDist));
 
   lcdController.sendTelemetry(lineAngle, avoidanceAngle);
 
@@ -202,16 +110,19 @@ void runDefense()
     return;
   }
 
-  if (camera.ballAngle == -5)
+  // Line avoidance — highest-priority safety override.
+  if (lineAngle != -5)
   {
-    movement.stop();
+    movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0, false);
     return;
   }
 
-  if (homeGoalAngle == -5)
+  // Execute the Pi's planned trajectory (Pipeline.md Steps 7-8). The executor's
+  // own freshness logic (clock sync + 20 ms grace + emergency brake) decides
+  // when a chunk is still valid; with no live chunk, hold position.
+  if (!trajectoryExecutor.execute())
   {
-    movement.movement(camera.ballAngle, defenseSpeedFactor, 0, false);
-    return;
+    movement.stop();
   }
 }
 
@@ -225,12 +136,7 @@ void loop()
   trajectoryExecutor.setMatchState(lcdController.isStartEnabled(),
                                    lcdController.isGoalBlueSelected(),
                                    lcdController.telemetryModeOverride());
-  if (kRobotMode == RobotMode::Offense)
-  {
-    runOffense();
-  }
-  else
-  {
-    runDefense();
-  }
+
+  // Role is Pi-driven; the Teensy executes chunks for whatever role the Pi sends.
+  runRobot();
 }

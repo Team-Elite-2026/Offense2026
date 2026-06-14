@@ -301,11 +301,11 @@ bool TrajectoryExecutor::execute() {
     float cos_th = cosf(theta_rad);
     float sin_th = sinf(theta_rad);
 
-    float vx_local_target = target.vx_global * cos_th - target.vy_global * sin_th;
-    float vy_local_target = target.vx_global * sin_th + target.vy_global * cos_th;
+    float vx_local_target =  target.vx_global * cos_th + target.vy_global * sin_th;
+    float vy_local_target = -target.vx_global * sin_th + target.vy_global * cos_th;
 
-    float ax_abs_local = target.ax_global * cos_th - target.ay_global * sin_th;
-    float ay_abs_local = target.ax_global * sin_th + target.ay_global * cos_th;
+    float ax_abs_local =  target.ax_global * cos_th + target.ay_global * sin_th;
+    float ay_abs_local = -target.ax_global * sin_th + target.ay_global * cos_th;
 
     // â”€â”€ 2. Coriolis feedforward compensation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     float ax_local_total = ax_abs_local - omega_actual * vy_actual;

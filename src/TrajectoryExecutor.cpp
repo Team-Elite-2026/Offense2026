@@ -20,10 +20,11 @@ static constexpr float R_CHASSIS = 0.09f;   // m, centre-to-wheel rotation radiu
 static constexpr float R_WHEEL   = 0.025f;  // m, wheel rolling radius
 
 // --- Motor feedforward model: V = kS*sign(omega) + kV*omega + kA*alpha ------------------
-// TODO: replace with bench-characterised values.
-static constexpr float kS = 0.119f;   // V  - static friction threshold
-static constexpr float kV = 5.35f;  // V*s/rad  - back-EMF coefficient
-static constexpr float kA = 0.17f;  // V*s^2/rad - inertia coefficient
+// Shared with the Pi-side planner model. kA is a provisional motor-only baseline
+// from the drivetrain datasheet and should be refined from robot-level tests.
+static constexpr float kS = 0.119f;     // V - static friction threshold
+static constexpr float kV = 0.139f;     // V*s/rad - back-EMF coefficient
+static constexpr float kA = 0.00074f;   // V*s^2/rad - provisional inertia coefficient
 
 // -----------------------------------------------------------------------------
 

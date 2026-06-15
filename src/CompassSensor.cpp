@@ -1,9 +1,11 @@
 #include <CompassSensor.h>
 #include <Wire.h>
 #include <trig.h>
+#include <string.h>
 
 CompassSensor::CompassSensor() {
-    
+    memset(&event,      0, sizeof(event));
+    memset(&gyroEvent_, 0, sizeof(gyroEvent_));
 }
 
 void CompassSensor::begin() {
@@ -30,17 +32,21 @@ void CompassSensor::callibrate() {
     }
 }
 
+// Reads heading (euler) and gyro into the cached events. Call once at the top
+// of loop(); all other methods return the cached values without I²C traffic.
+void CompassSensor::sample() {
+    bno.getEvent(&event);
+    bno.getEvent(&gyroEvent_, Adafruit_BNO055::VECTOR_GYROSCOPE);
+}
+
 // returns a value between 0 and 360
 int CompassSensor::getOrientation() {
-    bno.getEvent(&event);
     return event.orientation.x;
 }
 
 // Returns yaw rate in rad/s, CW positive (negated from BNO055 CCW-positive convention).
 float CompassSensor::getOmegaRadS() {
-    sensors_event_t gyroEvent;
-    bno.getEvent(&gyroEvent, Adafruit_BNO055::VECTOR_GYROSCOPE);
-    return -gyroEvent.gyro.z;
+    return -gyroEvent_.gyro.z;
 }
 
 // range between -180 and 180

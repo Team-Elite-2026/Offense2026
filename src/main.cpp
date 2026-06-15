@@ -128,6 +128,7 @@ void runRobot()
 
 void loop()
 {
+  compassSensor.sample();  // single I²C burst for heading + omega; all callers use cache
   linePCBComm.update();
   linePCBComm.setRobotHeadingDegrees((float)compassSensor.getOrientation());
   trajectoryExecutor.setMouseVelocity(linePCBComm.getMouseVx(), linePCBComm.getMouseVy());

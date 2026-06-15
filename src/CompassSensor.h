@@ -9,6 +9,9 @@ class CompassSensor {
     CompassSensor();
     void callibrate();
     void begin();
+    // Read heading and omega from BNO055 once per loop; getOrientation() and
+    // getOmegaRadS() return the cached values without issuing I²C transactions.
+    void sample();
     int currentOffset();
     int getOrientation();
     float getOmegaRadS();
@@ -20,6 +23,7 @@ class CompassSensor {
     private:
     Adafruit_BNO055 bno;
     sensors_event_t event;
-    
+    sensors_event_t gyroEvent_;
+
 };
 #endif // COMPASSSENSOR_H

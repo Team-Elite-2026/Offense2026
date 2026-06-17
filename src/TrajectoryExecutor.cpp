@@ -1,4 +1,4 @@
-?#include <TrajectoryExecutor.h>
+#include <TrajectoryExecutor.h>
 #include <Movement.h>
 #include <cmath>
 #include <cstring>
@@ -180,6 +180,12 @@ void TrajectoryExecutor::onChunkReceived(const ActionChunk& chunk) {
     }
 
     has_queued_chunk = true;
+
+    Serial.printf("Chunk rx: id=%llu actions=%u dt=%ums vx0=%.3f vy0=%.3f\n",
+                  (unsigned long long)chunk.trajectory_id,
+                  chunk.num_actions, chunk.dt_ms,
+                  chunk.num_actions > 0 ? chunk.actions[0].vx_global : 0.0f,
+                  chunk.num_actions > 0 ? chunk.actions[0].vy_global : 0.0f);
 }
 
 // --- Clock sync: send Ping (Teensy -> Pi) -------------------------------------

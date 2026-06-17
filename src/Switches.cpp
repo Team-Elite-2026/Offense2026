@@ -46,8 +46,6 @@ bool Switch::calibration()
 }
 bool Switch::lightgate()
 {
-    Serial.print("Lightgate: ");
-    Serial.println(digitalRead(41));
     if (digitalRead(41))
     {
         return false;

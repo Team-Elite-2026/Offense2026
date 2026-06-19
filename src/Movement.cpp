@@ -220,26 +220,17 @@ void Movement::testMotorsTogether() {
     constexpr double spd = 1;
     constexpr int holdMs = 1000;
 
-    // Forward pass: FL -> BL -> BR -> FR
     FLMotor.setSpeed(spd);
-
     BLMotor.setSpeed(spd);
-
     BRMotor.setSpeed(spd);
-
-    FRMotor.setSpeed(spd); 
+    FRMotor.setSpeed(spd);
 
     delay(holdMs);
 
-    // Backward pass: FL -> BL -> BR -> FR
-
-    FLMotor.setSpeed(-spd); 
-  
-    BLMotor.setSpeed(-spd);  
-
-    BRMotor.setSpeed(-spd);  
-
-    FRMotor.setSpeed(-spd); 
+    FLMotor.setSpeed(-spd);
+    BLMotor.setSpeed(-spd);
+    BRMotor.setSpeed(-spd);
+    FRMotor.setSpeed(-spd);
 
     delay(holdMs);
 

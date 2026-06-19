@@ -29,6 +29,7 @@ struct LcdControlState
   bool goalIsBlue;
   bool robotModeOverrideActive;
   bool lineCalibrationActive;
+  bool compassCalibrationRequested;
   bool hasStartPosition;
   LcdStartMode startMode;
   LcdStartPosition startPosition;

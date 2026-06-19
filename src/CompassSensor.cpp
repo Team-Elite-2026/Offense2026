@@ -26,7 +26,6 @@ void CompassSensor::callibrate() {
     while (mag<3) {
         String magStatus = "Mag: " + String(mag) + "/3";
         Serial.println(magStatus);
-        Serial8.println(magStatus);
         delay(500);
         bno.getCalibration(&system, &gyro, &accel, &mag);
     }
@@ -53,9 +52,9 @@ float CompassSensor::getOmegaRadS() {
 // this returns the offset between the current orientation and the zeroed angle
 int CompassSensor::currentOffset() {
   int offset = getOrientation() - this->zeroedAngle;
-  // Serial.println("Current Orientation: " + String(getOrientation()));
-  // Serial.println("Zeroed Angle: " + String(this->zeroedAngle));
-  // Serial.println("Calculated offset: - Orientation Diff: " + String(offset));
+  Serial.println("Current Orientation: " + String(getOrientation()));
+  Serial.println("Zeroed Angle: " + String(this->zeroedAngle));
+  Serial.println("Calculated offset: - Orientation Diff: " + String(offset));
 
   return Trig::wrapAngle(offset);
 

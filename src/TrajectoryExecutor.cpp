@@ -195,7 +195,7 @@ void TrajectoryExecutor::onChunkReceived(const ActionChunk& chunk) {
 // TeensyTelemetryPayload struct and sends a framed binary packet over Serial2.
 void TrajectoryExecutor::sendTelemetry() {
     TeensyTelemetryPayload p;
-    p.headingDeg     = (float)imu.getOrientation();
+    p.headingDeg     = (float)imu.currentOffset();
     p.mouseVxBodyMmS = readMouseVx() * 1000.0f;   // m/s -> mm/s
     p.mouseVyBodyMmS = readMouseVy() * 1000.0f;   // m/s -> mm/s
     p.omegaRadS      = imu.getOmegaRadS();
@@ -299,7 +299,7 @@ bool TrajectoryExecutor::execute() {
     }
 
     // -- Sensor reads ----------------------------------------------------------
-    float theta_rad = (float)imu.getOrientation() * (float)M_PI / 180.0f;
+    float theta_rad = -(float)imu.currentOffset() * (float)M_PI / 180.0f;
     float vx_actual    = readMouseVx();
     float vy_actual    = readMouseVy();
     float omega_actual = imu.getOmegaRadS();

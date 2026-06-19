@@ -5,14 +5,13 @@
 class Switch
 {
 public:
+    static constexpr int kStartPin     = 38;
+    static constexpr int kGoalSidePin  = 31;
+    static constexpr int kLightGatePin = 41;
+
     Switch();
     bool start();
     bool goalSide();
-    bool kickoff();
-    bool calibration();
     bool lightgate();
-
-private:
-    int recieverPin = 41;
 };
 #endif

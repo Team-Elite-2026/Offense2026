@@ -12,7 +12,7 @@ LcdController::LcdController(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _robotMode(robotMode),
     _commandLength(0)
 {
-  state = {false, false, false, true, false, false, false,
+  state = {false, false, false, true, false, false, false, false,
            LcdStartMode::None, LcdStartPosition::None, 0, 0};
 }
 
@@ -221,6 +221,13 @@ void LcdController::handleCommand(const char* command)
   if (strcmp(command, "CMD:CALIB_LINE_STOP") == 0)
   {
     state.lineCalibrationActive = false;
+    return;
+  }
+
+  if (strcmp(command, "CMD:CALIB_COMPASS") == 0)
+  {
+    state.compassCalibrationRequested = true;
+    _movement.stop();
     return;
   }
 

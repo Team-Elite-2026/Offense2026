@@ -183,3 +183,67 @@ void Movement::stop() {
     this->BRMotor.setSpeed(0);
 }
 
+void Movement::testMotorsIndividually() {
+    constexpr double spd = 1;
+    constexpr int holdMs = 1000;
+
+    // Forward pass: FL -> BL -> BR -> FR
+    Serial.println("TEST: FL FORWARD");
+    FLMotor.setSpeed(spd);  delay(holdMs);  FLMotor.stop();  delay(300);
+
+    Serial.println("TEST: BL FORWARD");
+    BLMotor.setSpeed(spd);  delay(holdMs);  BLMotor.stop();  delay(300);
+
+    Serial.println("TEST: BR FORWARD");
+    BRMotor.setSpeed(spd);  delay(holdMs);  BRMotor.stop();  delay(300);
+
+    Serial.println("TEST: FR FORWARD");
+    FRMotor.setSpeed(spd);  delay(holdMs);  FRMotor.stop();  delay(300);
+
+    // Backward pass: FL -> BL -> BR -> FR
+    Serial.println("TEST: FL BACKWARD");
+    FLMotor.setSpeed(-spd);  delay(holdMs);  FLMotor.stop();  delay(300);
+
+    Serial.println("TEST: BL BACKWARD");
+    BLMotor.setSpeed(-spd);  delay(holdMs);  BLMotor.stop();  delay(300);
+
+    Serial.println("TEST: BR BACKWARD");
+    BRMotor.setSpeed(-spd);  delay(holdMs);  BRMotor.stop();  delay(300);
+
+    Serial.println("TEST: FR BACKWARD");
+    FRMotor.setSpeed(-spd);  delay(holdMs);  FRMotor.stop();  delay(300);
+
+    Serial.println("TEST: done");
+}
+
+void Movement::testMotorsTogether() {
+    constexpr double spd = 1;
+    constexpr int holdMs = 1000;
+
+    // Forward pass: FL -> BL -> BR -> FR
+    FLMotor.setSpeed(spd);
+
+    BLMotor.setSpeed(spd);
+
+    BRMotor.setSpeed(spd);
+
+    FRMotor.setSpeed(spd); 
+
+    delay(holdMs);
+
+    // Backward pass: FL -> BL -> BR -> FR
+
+    FLMotor.setSpeed(-spd); 
+  
+    BLMotor.setSpeed(-spd);  
+
+    BRMotor.setSpeed(-spd);  
+
+    FRMotor.setSpeed(-spd); 
+
+    delay(holdMs);
+
+    Serial.println("TEST: done");
+}
+
+

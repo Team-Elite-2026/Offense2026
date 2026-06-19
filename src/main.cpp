@@ -26,10 +26,10 @@ double pinspeedFL = 5;
 CompassSensor compassSensor;
 Switch switches;
 Calibration calibration(compassSensor);
-Motor FL(pincontrolFLA, pincontrolFLB, pinspeedFL);
+Motor FL(pincontrolFLB, pincontrolFLA, pinspeedFL);
 Motor FR(pincontrolFRA, pincontrolFRB, pinspeedFR);
 Motor BL(pincontrolRLA, pincontrolRLB, pinspeedRL);
-Motor BR(pincontrolRRA, pincontrolRRB, pinspeedRR);
+Motor BR(pincontrolRRB, pincontrolRRA, pinspeedRR);
 Movement movement(FL, FR, BL, BR, compassSensor);
 Defense defense;
 LinePCBComm linePCBComm(Serial2);  // Serial2: LinePCB Teensy 4.0 link (1 Mbaud)
@@ -131,8 +131,7 @@ void runRobot()
 
 void loop()
 {
-  Serial.println("Looping");
-  compassSensor.sample();  // single I²C burst for heading + omega; all callers use cache
+  // compassSensor.sample();  // single I²C burst for heading + omega; all callers use cache
   // linePCBComm.update();
   // linePCBComm.setRobotHeadingDegrees((float)compassSensor.getOrientation());
   // trajectoryExecutor.setMouseVelocity(linePCBComm.getMouseVx(), linePCBComm.getMouseVy());
@@ -143,5 +142,6 @@ void loop()
   //                                  lcdController.telemetryModeOverride());
 
   // Role is Pi-driven; the Teensy executes chunks for whatever role the Pi sends.
-  runRobot();
+  // runRobot();
+  movement.testMotorsTogether();
 }

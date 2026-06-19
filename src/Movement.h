@@ -38,6 +38,8 @@ public:
     void kick();
     void kickBackground();
     void setDribbler(uint8_t power);
+    void testMotorsIndividually();
+    void testMotorsTogether();
 
 
     double kp = 0.6;

@@ -1,15 +1,14 @@
-#ifndef LCD_CONTROLLER_H
-#define LCD_CONTROLLER_H
+#ifndef MODE_CONTROL_H
+#define MODE_CONTROL_H
 
 #include <Arduino.h>
 #include <LinePCBComm.h>
 #include <CompassSensor.h>
-#include <Switches.h>
 #include <Movement.h>
 
 enum class RobotMode { Offense, Defense };
-enum class LcdStartMode { None, Offense, Defense };
-enum class LcdStartPosition
+enum class StartMode { None, Offense, Defense };
+enum class StartPosition
 {
   None,
   BehindBall,
@@ -21,28 +20,25 @@ enum class LcdStartPosition
   Neutral4
 };
 
-struct LcdControlState
+struct ModeControlState
 {
-  bool startOverrideActive;
-  bool startEnabled;
-  bool goalOverrideActive;
   bool goalIsBlue;
   bool robotModeOverrideActive;
   bool lineCalibrationActive;
   bool compassCalibrationRequested;
   bool hasStartPosition;
-  LcdStartMode startMode;
-  LcdStartPosition startPosition;
+  StartMode startMode;
+  StartPosition startPosition;
   unsigned long lastTelemetryMs;
   unsigned long lastCalibrationStatusMs;
 };
 
-class LcdController
+class ModeControl
 {
 public:
-  LcdController(HardwareSerial& serial, LinePCBComm& linePCBComm,
-                CompassSensor& compassSensor, Switch& switches,
-                Movement& movement, RobotMode& robotMode);
+  ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
+              CompassSensor& compassSensor, Movement& movement,
+              RobotMode& robotMode);
 
   void begin(uint32_t baud);
   void readCommands();
@@ -54,17 +50,18 @@ public:
   bool isGoalBlueSelected() const;
   uint8_t telemetryModeOverride() const;
 
-  LcdControlState state;
+  ModeControlState state;
 
 private:
-  static constexpr unsigned long kTelemetryIntervalMs       = 250;
+  static constexpr uint8_t       kStartPin                    = 38;
+  static constexpr uint8_t       kLightGatePin                = 41;
+  static constexpr unsigned long kTelemetryIntervalMs         = 250;
   static constexpr unsigned long kCalibrationStatusIntervalMs = 250;
-  static constexpr size_t        kCommandBufferSize          = 96;
+  static constexpr size_t        kCommandBufferSize           = 96;
 
   HardwareSerial& _serial;
   LinePCBComm&    _linePCBComm;
   CompassSensor&  _compassSensor;
-  Switch&         _switches;
   Movement&       _movement;
   RobotMode&      _robotMode;
 
@@ -77,10 +74,10 @@ private:
   bool handleStartPositionCommand(const char* command);
 
   static const char* robotModeToken(RobotMode mode);
-  static const char* startModeToken(LcdStartMode mode);
-  static const char* startPositionToken(LcdStartPosition position);
-  static bool        parseStartMode(const char* token, LcdStartMode& mode);
-  static bool        parseStartPosition(const char* token, LcdStartPosition& position);
+  static const char* startModeToken(StartMode mode);
+  static const char* startPositionToken(StartPosition position);
+  static bool        parseStartMode(const char* token, StartMode& mode);
+  static bool        parseStartPosition(const char* token, StartPosition& position);
 };
 
 #endif

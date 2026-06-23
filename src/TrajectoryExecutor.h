@@ -2,7 +2,6 @@
 #define TRAJECTORY_EXECUTOR_H
 
 #include <Arduino.h>
-#include <Switches.h>
 #include <Motor.h>
 #include <CompassSensor.h>
 #include <Movement.h>
@@ -95,7 +94,7 @@ static constexpr uint32_t TELEMETRY_INTERVAL_MS = 10;  // 100 Hz odometry stream
 class TrajectoryExecutor {
 public:
     TrajectoryExecutor(Motor& FL, Motor& FR, Motor& BL, Motor& BR,
-                       CompassSensor& imu, Switch& sw, Movement& movement);
+                       CompassSensor& imu, Movement& movement);
 
     // Drain Serial3 (Pi link), run the packet framing state machine, and send a
     // clock-sync ping every PING_INTERVAL_MS.  Must be called every loop iteration.
@@ -120,12 +119,13 @@ public:
     float Kp_omega = 0.0f;
 
 private:
+    static constexpr uint8_t kLightGatePin = 41;
+
     Motor&         FLMotor;
     Motor&         FRMotor;
     Motor&         BLMotor;
     Motor&         BRMotor;
     CompassSensor& imu;
-    Switch&        sw;
     Movement&      movement_;
 
     // â”€â”€ Trajectory double-buffer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

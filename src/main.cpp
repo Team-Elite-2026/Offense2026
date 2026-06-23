@@ -1,12 +1,12 @@
 #include <Arduino.h>
 #include <CompassSensor.h>
-#include <Switches.h>
+#include <Callibration.h>
 #include <Movement.h>
 #include <Defense.h>
 #include <trig.h>
 #include <string.h>
 #include <TrajectoryExecutor.h>
-#include <LcdController.h>
+#include <ModeControl.h>
 #include <LinePCBComm.h>
 
 double pincontrolRLA = 23;
@@ -23,7 +23,7 @@ double pincontrolFLB = 10;
 double pinspeedFL = 5;
 
 CompassSensor compassSensor;
-Switch switches;
+Calibration calibration(compassSensor);
 double pincontrolDribblerA = 11;
 double pincontrolDribblerB = 12;
 double pinspeedDribbler = 6;
@@ -36,34 +36,34 @@ Motor Dribbler(pincontrolDribblerA, pincontrolDribblerB, pinspeedDribbler);
 Movement movement(FL, FR, BL, BR, compassSensor);
 Defense defense;
 LinePCBComm linePCBComm(Serial2);  // Serial2: LinePCB Teensy 4.0 link (1 Mbaud)
-TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, switches, movement);
+TrajectoryExecutor trajectoryExecutor(FL, FR, BL, BR, compassSensor, movement);
 
 RobotMode kRobotMode = RobotMode::Offense;
-// LcdController lcdController(Serial8, linePCBComm, compassSensor, switches, movement, kRobotMode);
+ModeControl modeControl(Serial8, linePCBComm, compassSensor, movement, kRobotMode);
 
 double lineAvoidanceSpeed = 0.15;
 double lineAngle, avoidanceAngle;
 
-// bool runRequestedCalibration()
-// {
-//   if (lcdController.state.lineCalibrationActive)
-//   {
-//     movement.stop();
-//     linePCBComm.triggerCalibration();
-//     lcdController.sendCalibrationStatus();
-//     return true;
-//   }
-
-//   return false;
-// }
+bool runRequestedCalibration()
+{
+  // if (modeControl.state.lineCalibrationActive)
+  // {
+  //   movement.stop();
+  //   linePCBComm.triggerCalibration();
+  //   modeControl.sendCalibrationStatus();
+  //   return true;
+  // }
+  return false;
+}
 
 static uint8_t serial3RxBuf[4096];
 
 void setup()
 {
   Serial.begin(9600);
-  // lcdController.begin(9600);
-  Serial3.begin(2000000);   // Pi <-> Teensy 4.1
+  modeControl.begin(9600);
+  modeControl.applyRobotModeSettings();
+  Serial3.begin(2000000);   // Pi <-> Teensy 4.1 (was Serial2)
   Serial3.addMemoryForRead(serial3RxBuf, sizeof(serial3RxBuf));
   // linePCBComm.begin(1000000);  // LinePCB Teensy 4.0 link
   compassSensor.begin();
@@ -98,13 +98,7 @@ void runRobot()
   // framing state machine every loop so no packets are dropped.
   trajectoryExecutor.processSerial();
 
-  // lcdController.sendTelemetry(lineAngle, avoidanceAngle);
-
-  // if (!lcdController.isStartEnabled())
-  // {
-  //   movement.stop();
-  //   return;
-  // }
+  // modeControl.sendTelemetry(lineAngle, avoidanceAngle);
 
   // Line avoidance — highest-priority safety override.
   if (lineAngle != -5)
@@ -131,7 +125,7 @@ void loop()
 
   // While the rocker switch is off, continuously track current heading as zero.
   // The moment it is flipped on, the last-seen orientation becomes the field zero.
-  if (!switches.start())
+  if (!modeControl.isStartEnabled())
   {
     compassSensor.zeroedAngle = compassSensor.getOrientation();
     movement.stop();
@@ -144,7 +138,10 @@ void loop()
   // movement.stop();
  //  movement.movement(90,0.2,0,false);
 
-  // lcdController.readCommands();
+  // modeControl.readCommands();
+  // trajectoryExecutor.setMatchState(modeControl.isStartEnabled(),
+  //                                  modeControl.isGoalBlueSelected(),
+  //                                  modeControl.telemetryModeOverride());
 
   // Role is Pi-driven; the Teensy executes chunks for whatever role the Pi sends.
 }

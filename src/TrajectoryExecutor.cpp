@@ -33,8 +33,8 @@ static constexpr float kHeadingCorrGain = 1.0f;
 // -----------------------------------------------------------------------------
 
 TrajectoryExecutor::TrajectoryExecutor(Motor& FL, Motor& FR, Motor& BL, Motor& BR,
-                                       CompassSensor& imu, Switch& sw, Movement& movement)
-    : FLMotor(FL), FRMotor(FR), BLMotor(BL), BRMotor(BR), imu(imu), sw(sw), movement_(movement)
+                                       CompassSensor& imu, Movement& movement)
+    : FLMotor(FL), FRMotor(FR), BLMotor(BL), BRMotor(BR), imu(imu), movement_(movement)
 {
     memset(&active_chunk, 0, sizeof(active_chunk));
     memset(&queued_chunk, 0, sizeof(queued_chunk));
@@ -207,7 +207,7 @@ void TrajectoryExecutor::sendTelemetry() {
     p.mouseVxBodyMmS = readMouseVx() * 1000.0f;   // m/s -> mm/s
     p.mouseVyBodyMmS = readMouseVy() * 1000.0f;   // m/s -> mm/s
     p.omegaRadS      = imu.getOmegaRadS();
-    p.hasBall         = sw.lightgate() ? 1u : 0u;
+    p.hasBall         = (digitalRead(kLightGatePin) == LOW) ? 1u : 0u;
     p.startEnabled    = startEnabled_ ? 1u : 0u;
     p.goalIsBlue      = goalIsBlue_ ? 1u : 0u;
     p.modeOverride    = modeOverride_;

@@ -11,7 +11,7 @@ ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _robotMode(robotMode),
     _commandLength(0)
 {
-  state = {true, false, false, false, false,
+  state = {true, false, false, false, false, false,
            StartMode::None, StartPosition::None, 0, 0};
 }
 
@@ -60,7 +60,7 @@ void ModeControl::sendLineArray()
   _serial.print("LACT:");
   for (int i = 0; i < 48; i++)
   {
-    _serial.print(vals[i]);
+    _serial.print(vals[i] != 0 ? 1 : 0);
     if (i < 47)
     {
       _serial.print(",");
@@ -82,12 +82,15 @@ void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
   printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(_robotMode) : "AUTO"));
   bool lightGateBlocked = digitalRead(kLightGatePin) == LOW;
   printLine(String("Light Gate: ") + (lightGateBlocked ? "BLOCKED" : "CLEAR"));
-  printLine("Battery: -1");
+  printLine("Battery: 12.0");
   printLine(state.lineCalibrationActive ? "Calibrating" : "Line Cal: IDLE");
-  printLine("Orientation angle" + String(_compassSensor.currentOffset()));
+  printLine("Orientation angle: " + String(_compassSensor.getOrientation()));
   printLine("Line Angle: " + String(lineAngle));
   printLine("Avoidance angle: " + String(avoidanceAngle));
-  sendLineArray();
+  if (state.lineDebugEnabled)
+  {
+    sendLineArray();
+  }
 }
 
 void ModeControl::sendCalibrationStatus()
@@ -192,12 +195,33 @@ void ModeControl::handleCommand(const char* command)
   {
     state.lineCalibrationActive = true;
     _movement.stop();
+    _linePCBComm.triggerCalibration();
     return;
   }
 
   if (strcmp(command, "CMD:CALIB_LINE_STOP") == 0)
   {
     state.lineCalibrationActive = false;
+    return;
+  }
+
+  if (strcmp(command, "CMD:LINE_DEBUG_ON") == 0)
+  {
+    if (!state.lineDebugEnabled)
+    {
+      state.lineDebugEnabled = true;
+      _linePCBComm.setDebugEnabled(true);
+    }
+    return;
+  }
+
+  if (strcmp(command, "CMD:LINE_DEBUG_OFF") == 0)
+  {
+    if (state.lineDebugEnabled)
+    {
+      state.lineDebugEnabled = false;
+      _linePCBComm.setDebugEnabled(false);
+    }
     return;
   }
 

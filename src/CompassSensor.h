@@ -7,7 +7,7 @@
 class CompassSensor {
     public:
     CompassSensor();
-    void callibrate();
+    void callibrate(Print* statusOutput = nullptr);
     void begin();
     // Read heading and omega from BNO055 once per loop; getOrientation() and
     // getOmegaRadS() return the cached values without issuing I²C transactions.

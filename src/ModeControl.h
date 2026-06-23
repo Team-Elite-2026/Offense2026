@@ -25,6 +25,7 @@ struct ModeControlState
   bool goalIsBlue;
   bool robotModeOverrideActive;
   bool lineCalibrationActive;
+  bool lineDebugEnabled;
   bool compassCalibrationRequested;
   bool hasStartPosition;
   StartMode startMode;
@@ -55,7 +56,7 @@ public:
 private:
   static constexpr uint8_t       kStartPin                    = 38;
   static constexpr uint8_t       kLightGatePin                = 41;
-  static constexpr unsigned long kTelemetryIntervalMs         = 250;
+  static constexpr unsigned long kTelemetryIntervalMs         = 100;
   static constexpr unsigned long kCalibrationStatusIntervalMs = 250;
   static constexpr size_t        kCommandBufferSize           = 96;
 

@@ -46,13 +46,12 @@ double lineAngle, avoidanceAngle;
 
 bool runRequestedCalibration()
 {
-  // if (modeControl.state.lineCalibrationActive)
-  // {
-  //   movement.stop();
-  //   linePCBComm.triggerCalibration();
-  //   modeControl.sendCalibrationStatus();
-  //   return true;
-  // }
+  if (modeControl.state.lineCalibrationActive)
+  {
+    movement.stop();
+    modeControl.sendCalibrationStatus();
+    return true;
+  }
   return false;
 }
 
@@ -61,13 +60,14 @@ static uint8_t serial3RxBuf[4096];
 void setup()
 {
   Serial.begin(9600);
-  modeControl.begin(9600);
+  modeControl.begin(115200);
   modeControl.applyRobotModeSettings();
   Serial3.begin(2000000);   // Pi <-> Teensy 4.1 (was Serial2)
   Serial3.addMemoryForRead(serial3RxBuf, sizeof(serial3RxBuf));
-  // linePCBComm.begin(1000000);  // LinePCB Teensy 4.0 link
+  linePCBComm.begin(1000000);  // LinePCB Teensy 4.0 link
+  linePCBComm.setDebugEnabled(false);
   compassSensor.begin();
-  compassSensor.callibrate();
+  compassSensor.callibrate(&Serial8);
   Serial.println("compass callibration is done");
 }
 
@@ -79,26 +79,7 @@ void setup()
 // changing which chunks it sends — no Teensy-side change.
 void runRobot()
 {
-  avoidanceAngle = -5;
-  // if (runRequestedCalibration())
-  // {
-  //   movement.stop();
-  //   return;
-  // }
-
-  lineAngle = linePCBComm.getLineAngle();
-  if (lineAngle != -5)
-  {
-    avoidanceAngle = linePCBComm.getAvoidanceAngle();
-  }
-
   movement.kickBackground();
-
-  // Single owner of the Pi link (Serial3): drain it and run the chunk/pong
-  // framing state machine every loop so no packets are dropped.
-  trajectoryExecutor.processSerial();
-
-  // modeControl.sendTelemetry(lineAngle, avoidanceAngle);
 
   // Line avoidance — highest-priority safety override.
   if (lineAngle != -5)
@@ -119,9 +100,24 @@ void runRobot()
 void loop()
 {
   compassSensor.sample();  // single I²C burst for heading + omega; all callers use cache
-  // linePCBComm.update();
-  // linePCBComm.setRobotHeadingDegrees((float)compassSensor.getOrientation());
-  // trajectoryExecutor.setMouseVelocity(linePCBComm.getMouseVx(), linePCBComm.getMouseVy());
+  linePCBComm.update();
+  linePCBComm.setRobotHeadingDegrees((float)compassSensor.getOrientation());
+  trajectoryExecutor.setMouseVelocity(linePCBComm.getMouseVx(), linePCBComm.getMouseVy());
+
+  modeControl.readCommands();
+  trajectoryExecutor.setMatchState(modeControl.isStartEnabled(),
+                                   modeControl.isGoalBlueSelected(),
+                                   modeControl.telemetryModeOverride());
+  trajectoryExecutor.processSerial();
+
+  lineAngle = linePCBComm.getLineAngle();
+  avoidanceAngle = (lineAngle != -5) ? linePCBComm.getAvoidanceAngle() : -5;
+  modeControl.sendTelemetry(lineAngle, avoidanceAngle);
+
+  if (runRequestedCalibration())
+  {
+    return;
+  }
 
   // While the rocker switch is off, continuously track current heading as zero.
   // The moment it is flipped on, the last-seen orientation becomes the field zero.
@@ -138,11 +134,6 @@ void loop()
   // movement.testMotorsTogether();
   // movement.stop();
  //  movement.movement(90,0.2,0,false);
-
-  // modeControl.readCommands();
-  // trajectoryExecutor.setMatchState(modeControl.isStartEnabled(),
-  //                                  modeControl.isGoalBlueSelected(),
-  //                                  modeControl.telemetryModeOverride());
 
   // Role is Pi-driven; the Teensy executes chunks for whatever role the Pi sends.
 }

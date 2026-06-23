@@ -20,14 +20,25 @@ void CompassSensor::begin() {
   }
 }
 
-void CompassSensor::callibrate() {
+void CompassSensor::callibrate(Print* statusOutput) {
     uint8_t system, gyro, accel, mag = 0;
     bno.getCalibration(&system, &gyro, &accel, &mag);
     while (mag<3) {
-        String magStatus = "Mag: " + String(mag) + "/3";
-        Serial.println(magStatus);
+        Serial.print("Mag: ");
+        Serial.print(mag);
+        Serial.println("/3");
+        if (statusOutput != nullptr) {
+            statusOutput->print("Mag: ");
+            statusOutput->print(mag);
+            statusOutput->println("/3");
+        }
         delay(500);
         bno.getCalibration(&system, &gyro, &accel, &mag);
+    }
+
+    Serial.println("Mag: 3/3");
+    if (statusOutput != nullptr) {
+        statusOutput->println("Mag: 3/3");
     }
 }
 

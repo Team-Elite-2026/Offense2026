@@ -54,7 +54,7 @@ double Movement::findCorrectionRelOffset(double goalDirection) { // Makes the or
 
   if (abs(orientationDiff) < 5) {
     correction = 0;
-  } if (orientationDiff > 90) {
+  } else if (orientationDiff > 90) {
     correction = -1;
   } else if (orientationDiff < -90) {
     correction = 1;
@@ -71,7 +71,7 @@ double Movement::findCorrectionRelOffset(double goalDirection) { // Makes the or
 
 // Need to add orientation to the movement function
 void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool AimingGoal) {
-  Serial.println("Began Movement");
+  // Serial.println("Began Movement");
   intended_movement_angle -= 180;
 
   if (intended_movement_angle < 0) {
@@ -96,6 +96,8 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
     correction = findCorrectionRelZero(desiredOrientation);
   else
     correction = -1 * findCorrectionRelOffset(desiredOrientation);
+
+  Serial.println("Correction factor is: " + String(correction));
 
   powerFR -= correction;
   powerFL -= correction;
@@ -184,7 +186,7 @@ void Movement::stop() {
 }
 
 void Movement::testMotorsIndividually() {
-    constexpr double spd = 1;
+    constexpr double spd = 0.5;
     constexpr int holdMs = 1000;
 
     // Forward pass: FL -> BL -> BR -> FR
@@ -217,7 +219,7 @@ void Movement::testMotorsIndividually() {
 }
 
 void Movement::testMotorsTogether() {
-    constexpr double spd = 1;
+    constexpr double spd = 0.5;
     constexpr int holdMs = 1000;
 
     FLMotor.setSpeed(spd);

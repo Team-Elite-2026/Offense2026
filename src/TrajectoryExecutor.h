@@ -180,7 +180,8 @@ private:
     void     sendClockPing();
     void     sendTelemetry();
     void     executeAsymmetricDrive(float vx, float vy, float omega,
-                                    float ax, float ay, float alpha_rot);
+                                    float ax, float ay, float alpha_rot,
+                                    float headingCorrection = 0.0f);
     float    soft_sign(float w, float epsilon = 0.2f);
     float    readBatteryVoltage();
     float    readMouseVx();

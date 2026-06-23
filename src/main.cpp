@@ -137,17 +137,14 @@ void loop()
     movement.stop();
   }
   else {
-  movement.movement(0, 0.1, 0, true);
-
+    runRobot();
   }
 
-
-  compassSensor.currentOffset();
+  // movement.testMotorsTogether();
+  // movement.stop();
+ //  movement.movement(90,0.2,0,false);
 
   // lcdController.readCommands();
 
   // Role is Pi-driven; the Teensy executes chunks for whatever role the Pi sends.
-  // runRobot();
-
-  // movement.testMotorsIndividually();
 }

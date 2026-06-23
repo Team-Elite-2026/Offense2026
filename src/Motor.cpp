@@ -30,7 +30,7 @@ void Motor::setSpeed(double speed) {
 void Motor::stop() {
     this->speed = 0;
     digitalWrite(this->in1, LOW);
-    digitalWrite(this->in2, LOW); 
+    digitalWrite(this->in2, LOW);
     analogWrite(this->pwmPin, 0);
 }
 

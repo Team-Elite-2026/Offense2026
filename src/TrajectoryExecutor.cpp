@@ -23,8 +23,12 @@ static constexpr float R_WHEEL   = 0.025f;  // m, wheel rolling radius
 // Shared with the Pi-side planner model. kA is a provisional motor-only baseline
 // from the drivetrain datasheet and should be refined from robot-level tests.
 static constexpr float kS = 0.119f;     // V - static friction threshold
-static constexpr float kV = 0.139f;     // V*s/rad - back-EMF coefficient
+static constexpr float kV = 0.015f;     // V*s/rad - tuned from rotation test (540deg/57deg = 9.47x scale)
 static constexpr float kA = 0.00074f;   // V*s^2/rad - provisional inertia coefficient
+
+// Heading-hold gain: scales Movement's normalized [-1,1] compass correction, applied
+// as a common-mode wheel offset (same domain as Movement::movement). Tune on the bench.
+static constexpr float kHeadingCorrGain = 1.0f;
 
 // -----------------------------------------------------------------------------
 
@@ -167,7 +171,11 @@ void TrajectoryExecutor::setMatchState(bool startEnabled, bool goalIsBlue, uint8
 void TrajectoryExecutor::onChunkReceived(const ActionChunk& chunk) {
     if (!is_first_chunk &&
         chunk.trajectory_id <= active_chunk.trajectory_id) {
-        return;  // stale or duplicate
+        // Also accept if start_time_pi jumped forward by >500 ms — that means
+        // the Pi restarted or a new replay run began, so IDs reset is expected.
+        constexpr uint64_t kSessionGapUs = 500'000ULL;
+        if (chunk.start_time_pi <= active_chunk.start_time_pi + kSessionGapUs)
+            return;  // stale or duplicate
     }
 
     queued_chunk = chunk;
@@ -321,16 +329,22 @@ bool TrajectoryExecutor::execute() {
     // -- 3. Velocity PID correction --------------------------------------------
     float vx_cmd    = vx_local_target + Kp_x     * (vx_local_target - vx_actual);
     float vy_cmd    = vy_local_target + Kp_y     * (vy_local_target - vy_actual);
-    float omega_cmd = target.omega    + Kp_omega * (target.omega     - omega_actual);
+    float omega_cmd = target.omega;  // trajectory-commanded rotation feedforward
+
+    // Heading-hold: Movement's compass PID returns a normalized [-1,1] yaw command.
+    // Apply it the same way movement() does — a common-mode offset on the wheels.
+    float heading_corr = (float)movement_.findCorrectionRelZero(0.0) * kHeadingCorrGain;
 
     executeAsymmetricDrive(vx_cmd, vy_cmd, omega_cmd,
-                           ax_local_total, ay_local_total, target.alpha);
+                           ax_local_total, ay_local_total, target.alpha,
+                           heading_corr);
     return true;
 }
 
 // --- Asymmetric kinematics + voltage safeguard (Pipeline.md Step 8) ----------
 void TrajectoryExecutor::executeAsymmetricDrive(float vx, float vy, float omega,
-                                                float ax, float ay, float alpha_rot) {
+                                                float ax, float ay, float alpha_rot,
+                                                float headingCorrection) {
     float v_bus = readBatteryVoltage();
 
     float target_voltages[4];
@@ -361,12 +375,27 @@ void TrajectoryExecutor::executeAsymmetricDrive(float vx, float vy, float omega,
             target_voltages[i] *= scale;
     }
 
+    // Normalized wheel commands [-1, 1], then heading-hold as a common-mode yaw
+    // offset on all wheels (same as Movement::movement: powerX -= correction).
+    float cmd[4];
+    float peak = 0.0f;
+    for (int i = 0; i < 4; ++i) {
+        cmd[i] = target_voltages[i] / v_bus - headingCorrection;
+        float a = fabsf(cmd[i]);
+        if (a > peak) peak = a;
+    }
+    // Scale down only if the offset pushes a wheel past full (preserve direction
+    // and the translation velocity targets; unlike Movement we never scale up).
+    if (peak > 1.0f) {
+        for (int i = 0; i < 4; ++i) cmd[i] /= peak;
+    }
+
     // Wheel-to-motor mapping (matches ALPHA_WHEEL order [FR, RR, RL, FL]):
     // TODO: verify index->motor assignment against physical wiring.
-    FRMotor.setSpeed(target_voltages[0] / v_bus);
-    BRMotor.setSpeed(target_voltages[1] / v_bus);
-    BLMotor.setSpeed(target_voltages[2] / v_bus);
-    FLMotor.setSpeed(target_voltages[3] / v_bus);
+    FRMotor.setSpeed(cmd[0]);
+    BRMotor.setSpeed(cmd[1]);
+    BLMotor.setSpeed(cmd[2]);
+    FLMotor.setSpeed(cmd[3]);
 }
 
 // -----------------------------------------------------------------------------
@@ -377,9 +406,8 @@ float TrajectoryExecutor::soft_sign(float w, float epsilon) {
 }
 
 float TrajectoryExecutor::readBatteryVoltage() {
-    // Read the battery voltage from the ADC pin.
-    return analogRead(BATT_ADC_PIN) * (3.3f / 1023.0f) * DIVIDER_RATIO;
-    
+    // return analogRead(BATT_ADC_PIN) * (3.3f / 1023.0f) * DIVIDER_RATIO;
+    return 12;
 }
 
 float TrajectoryExecutor::readMouseVx() { return vxMouseMs_; }

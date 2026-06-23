@@ -42,7 +42,7 @@ public:
     void testMotorsTogether();
 
 
-    double kp = 0.6;
+    double kp = 0.3;
     double ki = 0;
     double kd = 0.000005;
 

@@ -11,7 +11,7 @@ ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _robotMode(robotMode),
     _commandLength(0)
 {
-  state = {true, false, false, false,
+  state = {true, false, false, false, false,
            StartMode::None, StartPosition::None, 0, 0};
 }
 

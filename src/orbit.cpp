@@ -1,5 +1,6 @@
 #include <orbit.h>
-
+#include <math.h>
+#include <trig.h>
 Orbit::Orbit(int robotNum)
 {
     physicalRobot = robotNum;
@@ -16,7 +17,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance)
     // Serial.print("calculated distance: ");
     // Serial.println(distance);
     // double dampenVal = min(1, 0.025 * exp(4.5 * distance));
-    double dampenVal = min(1, 0.02 * exp(4.5 * distance));
+    double dampenVal = Trig::min(1, 0.02 * exp(4.5 * distance));
     // Serial.print("dampen val: ");
     // Serial.println(dampenVal);
 
@@ -25,10 +26,10 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance)
 
 
     if(physicalRobot == 1){ // Offense
-        orbitValue = min(90, 2*M_PI * exp(0.05 * newballAngle));
+        orbitValue = Trig::min(90, 2*M_PI * exp(0.05 * newballAngle));
     }
     else{ 
-        orbitValue = min(90, 8 * exp(0.033 * newballAngle));
+        orbitValue = Trig::min(90, 8 * exp(0.033 * newballAngle));
     }
 
     double outputSum = orbitValue * dampenVal;
@@ -47,8 +48,8 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance)
     {
         robotAngle += 360;
     }
-    Serial.print("robot Angle: ");
-    Serial.println(robotAngle);
+    // Serial.print("robot Angle: ");
+    // Serial.println(robotAngle);
     return robotAngle;
 }
 
@@ -69,7 +70,7 @@ double Orbit::GetToPosition(int targetX, int targetY, int currentX, int currentY
     {
         homeAngle = homeAngle + 360;
     }
-    Serial.print("home Angle: ");
-    Serial.println(homeAngle);
+    // Serial.print("home Angle: ");
+    // Serial.println(homeAngle);
     return homeAngle;
 }

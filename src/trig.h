@@ -1,7 +1,10 @@
 #ifndef trig_h
 #define trig_h
 
-#include <LineDetection.h>
+struct Point {
+    double x;
+    double y;
+};
 
 class Trig {
 public:
@@ -14,6 +17,7 @@ public:
     static double getDist(Point p1, Point p2);
     static double dotProduct(int num1, int num2);
     static double wrapAngle(double angle);
+    static double min(double a, double b);
 };
 
 #endif

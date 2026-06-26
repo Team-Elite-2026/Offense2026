@@ -15,12 +15,12 @@ Cam::Cam()
 }
 double Cam::CamCalc()
 {
-  if (Serial2.available() > 0)
+  if (Serial3.available() > 0)
   {
     
-    for (int i = 0; i < Serial2.available(); i++)
+    for (int i = 0; i < Serial3.available(); i++)
     {
-      read = Serial2.read();
+      read = Serial3.read();
       // Serial.println(read);
       if (read == 'b')
       {

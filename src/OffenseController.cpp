@@ -27,7 +27,7 @@ void runOffense()
     linePCBComm.update();
     camera.CamCalc();
     lineAngle = linePCBComm.getLineAngle();
-    orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
+    orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist, camera.derivative, camera.sampleTime);
     if (modeControl->state.goalIsBlue)
     {
       Serial.println("blue goal");

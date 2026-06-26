@@ -17,6 +17,8 @@ public:
         double blueGoal;
         double ballAngle;
         double ballDist;
+        double derivative;
+        int sampleTime;
         double CamCalc();
         std::string buffer;
         bool inIntake;

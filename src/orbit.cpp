@@ -4,10 +4,18 @@
 Orbit::Orbit(int robotNum)
 {
     physicalRobot = robotNum;
+    kd = 0.3;
 }
 
-double Orbit::CalculateRobotAngle(double ballAngle, double distance)
+double Orbit::CalculateRobotAngle(double ballAngle, double distance, double derivative, int sampleTime)
 {
+    double dTerm = 0;
+    if (derivative != -5 && sampleTime > 0)
+    {
+        double sampleTimeInSec = static_cast<double>(sampleTime) / 1000.0;
+        dTerm = kd * (derivative / sampleTimeInSec);
+    }
+
     distance = distance / 150;
     if (distance > 1)
     {
@@ -33,6 +41,10 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance)
     }
 
     double outputSum = orbitValue * dampenVal;
+    if (dTerm > 3)
+    {
+        outputSum -= dTerm;
+    }
 
     // Serial.print("Orbit val before: ");
     // Serial.println(orbitvalue);

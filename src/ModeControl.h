@@ -2,11 +2,10 @@
 #define MODE_CONTROL_H
 
 #include <Arduino.h>
+#include <RobotConfig.h>
 #include <LinePCBComm.h>
 #include <CompassSensor.h>
 #include <Movement.h>
-
-enum class RobotMode { Offense, Defense };
 enum class StartMode { None, Offense, Defense };
 enum class StartPosition
 {

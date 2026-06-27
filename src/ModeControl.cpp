@@ -1,5 +1,6 @@
 #include <ModeControl.h>
 #include <string.h>
+#include <stdlib.h>
 
 ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
                          CompassSensor& compassSensor, Movement& movement,
@@ -10,10 +11,11 @@ ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _movement(movement),
     _robotMode(robotMode),
     _commandLength(0),
-    _batteryVoltage(0.0f)
+    _batteryVoltage(0.0f),
+    _nextDebugKickMs(kDebugKickCooldownMs)
 {
   state = {true, false, false, false, false, false,
-           StartMode::None, StartPosition::None, 0};
+           StartMode::None, StartPosition::None, 0, 0};
 }
 
 void ModeControl::begin(uint32_t baud)
@@ -21,7 +23,14 @@ void ModeControl::begin(uint32_t baud)
   _serial.begin(baud);
   pinMode(kStartPin, INPUT);
   pinMode(kLightGatePin, INPUT_PULLUP);
+  pinMode(kDebugKickerPin, OUTPUT);
+  digitalWrite(kDebugKickerPin, LOW);
+  pinMode(kDebugDribblerPinA, OUTPUT);
+  pinMode(kDebugDribblerPinB, OUTPUT);
+  pinMode(kDebugDribblerPwmPin, OUTPUT);
+  setDebugDribbler(0, 0);
   pinMode(kBatterySensePin, INPUT);
+  _nextDebugKickMs = millis() + kDebugKickCooldownMs;
   analogReadResolution(12);
   analogReadAveraging(kBatterySampleCount);
 }
@@ -108,6 +117,30 @@ float ModeControl::readBatteryVoltage()
   return _batteryVoltage;
 }
 
+void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
+{
+  unsigned long now = millis();
+  if (now - state.lastTelemetryMs < kTelemetryIntervalMs)
+  {
+    return;
+  }
+  state.lastTelemetryMs = now;
+
+  printLine(isGoalBlueSelected() ? "blue goal" : "yellow goal");
+  printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(_robotMode) : "AUTO"));
+  bool lightGateBlocked = digitalRead(kLightGatePin) == LOW;
+  printLine(String("Light Gate: ") + (lightGateBlocked ? "BLOCKED" : "CLEAR"));
+  printLine(String("Battery: ") + String(readBatteryVoltage(), 1));
+  printLine(state.lineCalibrationActive ? "Calibrating" : "Line Cal: IDLE");
+  printLine("Orientation angle: " + String(_compassSensor.getOrientation()));
+  printLine("Line Angle: " + String(lineAngle));
+  printLine("Avoidance angle: " + String(avoidanceAngle));
+  if (state.lineDebugEnabled)
+  {
+    sendLineArray();
+  }
+}
+
 void ModeControl::sendCalibrationStatus()
 {
   unsigned long now = millis();
@@ -117,6 +150,48 @@ void ModeControl::sendCalibrationStatus()
   }
   state.lastCalibrationStatusMs = now;
   printLine("Calibrating");
+}
+
+void ModeControl::debugKick()
+{
+  unsigned long now = millis();
+  if (now < _nextDebugKickMs)
+  {
+    printLine("Kick: WAIT");
+    return;
+  }
+
+  digitalWrite(kDebugKickerPin, HIGH);
+  delay(10);
+  digitalWrite(kDebugKickerPin, LOW);
+  _nextDebugKickMs = millis() + kDebugKickCooldownMs;
+  printLine("Kick: DONE");
+}
+
+void ModeControl::setDebugDribbler(int8_t direction, uint8_t pwm)
+{
+  const char* directionText = "STOP ";
+  if (direction > 0 && pwm > 0)
+  {
+    digitalWrite(kDebugDribblerPinA, HIGH);
+    digitalWrite(kDebugDribblerPinB, LOW);
+    directionText = "FWD ";
+  }
+  else if (direction < 0 && pwm > 0)
+  {
+    digitalWrite(kDebugDribblerPinA, LOW);
+    digitalWrite(kDebugDribblerPinB, HIGH);
+    directionText = "BACK ";
+  }
+  else
+  {
+    digitalWrite(kDebugDribblerPinA, LOW);
+    digitalWrite(kDebugDribblerPinB, LOW);
+    pwm = 0;
+  }
+
+  analogWrite(kDebugDribblerPwmPin, pwm);
+  printLine(String("Dribbler: ") + directionText + String(pwm));
 }
 
 bool ModeControl::handleStartPositionCommand(const char* command)
@@ -236,6 +311,34 @@ void ModeControl::handleCommand(const char* command)
       state.lineDebugEnabled = false;
       _linePCBComm.setDebugEnabled(false);
     }
+    return;
+  }
+
+  if (strcmp(command, "CMD:KICK") == 0)
+  {
+    debugKick();
+    return;
+  }
+
+  if (strcmp(command, "CMD:DRIBBLER:STOP") == 0)
+  {
+    setDebugDribbler(0, 0);
+    return;
+  }
+
+  if (strncmp(command, "CMD:DRIBBLER:FWD:", 17) == 0)
+  {
+    int pwm = atoi(command + 17);
+    pwm = constrain(pwm, 0, 255);
+    setDebugDribbler(1, (uint8_t)pwm);
+    return;
+  }
+
+  if (strncmp(command, "CMD:DRIBBLER:BACK:", 18) == 0)
+  {
+    int pwm = atoi(command + 18);
+    pwm = constrain(pwm, 0, 255);
+    setDebugDribbler(-1, (uint8_t)pwm);
     return;
   }
 

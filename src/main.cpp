@@ -104,16 +104,18 @@ void setup()
   pinMode(30, OUTPUT);
   pinMode(selectionPin, INPUT);
 
-  // compassSensor.callibrate();
-  compassSensor.begin();
-  calibration.calibrateCompassSensor();
-  linePCBComm.begin(1000000);
-
   initializeDriveMotors();
   movement = new Movement(*FL, *FR, *BL, *BR, *dribbler, compassSensor);
   camera.setMovement(movement);
   modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement, kRobotMode);
   modeControl->begin(115200);
+  modeControl->sendBootMarker();
+
+  compassSensor.begin();
+  compassSensor.callibrate(modeControl->statusOutput());
+  calibration.calibrateCompassSensor();
+  linePCBComm.begin(1000000);
+
   offenseStateMachine = new OffenseStateMachine(
     compassSensor,
     calibration,
@@ -180,6 +182,15 @@ void loop()
   }
 
   sendHeadingTelemetryToPi();
+  linePCBComm.setRobotHeadingDegrees(compassSensor.currentOffset());
   linePCBComm.update();
+  double lcdLineAngle = linePCBComm.getLineAngle();
+  double lcdAvoidanceAngle = linePCBComm.getAvoidanceAngle();
+  if (kRobotMode == RobotMode::Offense)
+  {
+    lcdLineAngle = offenseStateMachine->lineAngle();
+    lcdAvoidanceAngle = offenseStateMachine->avoidanceAngle();
+  }
+  modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle);
   // delay(1000);
 }

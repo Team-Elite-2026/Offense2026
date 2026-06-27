@@ -26,14 +26,6 @@ void ModeControl::begin(uint32_t baud)
   analogReadAveraging(kBatterySampleCount);
 }
 
-void ModeControl::applyRobotModeSettings()
-{
-  if (_robotMode == RobotMode::Offense)
-  {
-    _movement.myPID->SetTunings(0.3, _movement.ki, _movement.kd);
-  }
-}
-
 void ModeControl::sendBootMarker()
 {
   printLine("LCD:BOOT");
@@ -196,7 +188,6 @@ void ModeControl::handleCommand(const char* command)
   {
     state.robotModeOverrideActive = true;
     _robotMode = RobotMode::Offense;
-    applyRobotModeSettings();
     return;
   }
 
@@ -204,7 +195,6 @@ void ModeControl::handleCommand(const char* command)
   {
     state.robotModeOverrideActive = true;
     _robotMode = RobotMode::Defense;
-    applyRobotModeSettings();
     return;
   }
 

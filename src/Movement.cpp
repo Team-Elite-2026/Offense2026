@@ -5,7 +5,7 @@
 namespace {
 constexpr double kPoseArrivalToleranceMm = 50.0;
 constexpr double kPoseFullSpeedDistanceMm = 600.0;
-constexpr double kPoseMaxSpeedFactor = 0.25;
+constexpr double kPoseMaxSpeedFactor = 0.15; // TODO: TUNE AND FIX
 }
 
 Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor)

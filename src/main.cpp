@@ -14,7 +14,7 @@
 
 // Configure the active offense mode here while the automatic transitions are
 // still being developed.
-constexpr OffenseState kConfiguredOffenseState = OffenseState::Orbit;
+constexpr OffenseState kConfiguredOffenseState = OffenseState::SpinShot;
 
 // LidarLocalizer returns field-corner-origin coordinates in millimeters:
 // x = 0..1820 across field width, y = 0..2430 along field height.
@@ -43,7 +43,7 @@ unsigned long lastPiHeadingTelemetryMs = 0;
 static void initializeDriveMotors()
 {
   pinMode(selectionPin, INPUT);
-  const bool useDefaultMotorLayout = digitalRead(selectionPin) == HIGH;
+  const bool useDefaultMotorLayout = digitalRead(selectionPin) == LOW;
 
   if (useDefaultMotorLayout)
   {
@@ -81,6 +81,7 @@ void setup()
   Serial.println("Testing Run");
   Serial3.begin(2000000);
 
+  // compassSensor.calibrate();
   compassSensor.begin();
   calibration.calibrateCompassSensor();
   linePCBComm.begin(1000000);
@@ -90,7 +91,6 @@ void setup()
   camera.setMovement(movement);
   modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement, kRobotMode);
   modeControl->begin(115200);
-  modeControl->applyRobotModeSettings();
   offenseStateMachine = new OffenseStateMachine(
     compassSensor,
     calibration,
@@ -101,33 +101,33 @@ void setup()
     *modeControl);
 }
 
-// void runDefense()
-// {
-//   if (switches.calibration())
-//   {
-//     movement->stop();
-//     calibration.calibrateCompassSensor();
-//     Serial.println("Calibrating");
-//     return;
-//   }
-//
-//   camera.CamCalc();
-//   movement->kickBackground();
-//
-//   if (!switches.start())
-//   {
-//     movement->stop();
-//     return;
-//   }
-//
-//   if (camera.ballAngle == -5)
-//   {
-//     movement->stop();
-//     return;
-//   }
-//
-//   movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
-// }
+void runDefense()
+{
+  if (switches.calibration())
+  {
+    movement->stop();
+    calibration.calibrateCompassSensor();
+    Serial.println("Calibrating");
+    return;
+  }
+
+  camera.CamCalc();
+  movement->kickBackground();
+
+  if (!switches.start())
+  {
+    movement->stop();
+    return;
+  }
+
+  if (camera.ballAngle == -5)
+  {
+    movement->stop();
+    return;
+  }
+
+  movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
+}
 
 void loop()
 {

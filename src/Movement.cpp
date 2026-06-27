@@ -192,6 +192,24 @@ void Movement::stop() {
     this->BRMotor.setSpeed(0);
 }
 
+void Movement::runAll() {
+    this->FLMotor.setSpeed(0.2);
+    this->FRMotor.setSpeed(0.2);
+    this->BLMotor.setSpeed(0.2);
+    this->BRMotor.setSpeed(0.2);
+
+    delay(2000);
+
+    this->FLMotor.setSpeed(-0.2);
+    this->FRMotor.setSpeed(-0.2);
+    this->BLMotor.setSpeed(-0.2);
+    this->BRMotor.setSpeed(-0.2);
+
+    delay(2000);
+
+}
+
+
 void Movement::PlanToPose(Point desiredPose) {
   this->currentPose.heading = compassSensor.currentOffset();
   double speedfactor = computeSpeedFactor(this->currentPose, desiredPose);

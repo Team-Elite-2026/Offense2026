@@ -51,7 +51,7 @@ static void initializeDriveMotors()
   else
   {
     FL = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
-    FR = new Motor(pincontrolFRA, pincontrolFRB, pinspeedFR);
+    FR = new Motor(pincontrolFRB, pincontrolFRA, pinspeedFR);
     BL = new Motor(pincontrolRLB, pincontrolRLA, pinspeedRL);
     BR = new Motor(pincontrolRRB, pincontrolRRA, pinspeedRR);
   }
@@ -148,6 +148,17 @@ void runDefense()
   }
 
   movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
+}
+
+void testBackLeftRobot2() {
+  digitalWrite(pincontrolRLB, HIGH);
+  digitalWrite(pincontrolRLA, LOW);
+  analogWrite(pinspeedRL, 128);
+  delay(2000);
+  digitalWrite(pincontrolRLB, LOW);
+  digitalWrite(pincontrolRLA, HIGH);
+  analogWrite(pinspeedRL, 128);
+  delay(2000);
 }
 
 void loop()

@@ -40,6 +40,7 @@ public:
     void kick();
     void kickBackground();
     void PlanToPose(Point desiredPose);
+    void runAll();
     double computeSpeedFactor(Point currentPose, Point desiredPose);
 
     Point currentPose;

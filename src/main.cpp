@@ -79,6 +79,29 @@ void setup()
   Serial.println("Testing Run");
   Serial3.begin(2000000);
 
+  pinMode(11, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(6, OUTPUT);
+
+  pinMode(23, OUTPUT);
+  pinMode(22, OUTPUT);
+  pinMode(2, OUTPUT);
+
+  pinMode(21, OUTPUT);
+  pinMode(20, OUTPUT);
+  pinMode(3, OUTPUT);
+
+  pinMode(18, OUTPUT);
+  pinMode(31, OUTPUT);
+  pinMode(4, OUTPUT);
+
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(5, OUTPUT);
+
+  pinMode(30, OUTPUT);
+  pinMode(selectionPin, INPUT);
+
   // compassSensor.callibrate();
   compassSensor.begin();
   calibration.calibrateCompassSensor();

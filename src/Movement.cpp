@@ -3,9 +3,9 @@
 #include <trig.h>
 
 namespace {
-constexpr double kPoseArrivalToleranceMm  = 50.0;
+constexpr double kPoseArrivalToleranceMm  = 20.0;
 constexpr double kPoseFullSpeedDistanceMm = 250.0;
-constexpr double kPoseMinSpeedFactor      = 0.03;
+constexpr double kPoseMinSpeedFactor      = 0.06;
 constexpr double kPoseMaxSpeedFactor      = 0.12;
 }
 

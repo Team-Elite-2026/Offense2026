@@ -81,7 +81,7 @@ void setup()
   Serial.println("Testing Run");
   Serial3.begin(2000000);
 
-  // compassSensor.calibrate();
+  compassSensor.callibrate();
   compassSensor.begin();
   calibration.calibrateCompassSensor();
   linePCBComm.begin(1000000);

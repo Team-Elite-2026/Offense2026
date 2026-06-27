@@ -179,8 +179,6 @@ void loop()
     runDefense();
   }
 
-  // BR->setSpeed(0.5);
-  // dribbler->setSpeed(0);
   sendHeadingTelemetryToPi();
   linePCBComm.update();
   // delay(1000);

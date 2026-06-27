@@ -1,6 +1,8 @@
 #include <orbit.h>
 #include <math.h>
 #include <trig.h>
+#include <Arduino.h>
+
 Orbit::Orbit(int robotNum)
 {
     physicalRobot = robotNum;
@@ -25,7 +27,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     // Serial.print("calculated distance: ");
     // Serial.println(distance);
     // double dampenVal = min(1, 0.025 * exp(4.5 * distance));
-    double dampenVal = Trig::min(1, 0.02 * exp(6 * distance));
+    double dampenVal = Trig::min(1, 0.02 * exp(4.5 * distance));
     // Serial.print("dampen val: ");
     // Serial.println(dampenVal);
 
@@ -33,7 +35,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     double newballAngle = ballAngle > 180 ? (360 - ballAngle) : ballAngle;
     double orbitValue;
 
-    orbitValue = Trig::min(90, 2*M_PI * exp(0.05 * newballAngle));
+    orbitValue = Trig::min(90, 4 * exp(0.1 * (newballAngle-30)));
 
     double outputSum = orbitValue * dampenVal;
     if (dTerm > 3)
@@ -55,7 +57,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     {
         robotAngle += 360;
     }
-    // Serial.print("robot Angle: ");
-    // Serial.println(robotAngle);
+    Serial.print("robot Angle: ");
+    Serial.println(robotAngle);
     return robotAngle;
 }

@@ -22,7 +22,7 @@ constexpr double selectionPin  = 26;
 
 constexpr RobotMode defaultRobotMode = RobotMode::Offense;
 constexpr double defenseSpeedFactor  = 0.26;
-constexpr double offenseSpeedFactor  = 0.22;
+constexpr double offenseSpeedFactor  = 0.28;
 constexpr double lineAvoidanceSpeed  = 0.15;
 
 #endif

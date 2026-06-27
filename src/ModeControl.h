@@ -42,7 +42,7 @@ public:
 
   void begin(uint32_t baud);
   void readCommands();
-  void sendTelemetry(double lineAngle, double avoidanceAngle);
+  void sendTelemetry();
   void sendCalibrationStatus();
   void sendBootMarker();
   void applyRobotModeSettings();

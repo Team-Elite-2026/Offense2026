@@ -116,7 +116,7 @@ float ModeControl::readBatteryVoltage()
   return _batteryVoltage;
 }
 
-void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
+void ModeControl::sendTelemetry()
 {
   unsigned long now = millis();
   if (now - state.lastTelemetryMs < kTelemetryIntervalMs)
@@ -125,19 +125,9 @@ void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
   }
   state.lastTelemetryMs = now;
 
-  printLine(isGoalBlueSelected() ? "blue goal" : "yellow goal");
-  printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(_robotMode) : "AUTO"));
-  bool lightGateBlocked = digitalRead(kLightGatePin) == LOW;
-  printLine(String("Light Gate: ") + (lightGateBlocked ? "BLOCKED" : "CLEAR"));
-  printLine(String("Battery: ") + String(readBatteryVoltage(), 1));
-  printLine(state.lineCalibrationActive ? "Calibrating" : "Line Cal: IDLE");
-  printLine("Orientation angle: " + String(_compassSensor.getOrientation()));
-  printLine("Line Angle: " + String(lineAngle));
-  printLine("Avoidance angle: " + String(avoidanceAngle));
-  if (state.lineDebugEnabled)
-  {
-    sendLineArray();
-  }
+  _serial.print("T,heading=");
+  _serial.print(_compassSensor.currentOffset());
+  _serial.println();
 }
 
 void ModeControl::sendCalibrationStatus()

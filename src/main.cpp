@@ -127,7 +127,5 @@ void loop()
     offenseStateMachine->run(kConfiguredOffenseState, kSpinShotTargetPose);
   }
 
-  modeControl->sendTelemetry(
-    offenseStateMachine->lineAngle(),
-    offenseStateMachine->avoidanceAngle());
+  modeControl->sendTelemetry();
 }

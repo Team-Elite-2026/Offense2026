@@ -11,7 +11,7 @@ constexpr double kArrivalMarginMm = 30.0;
 
 // SpinShot: spin magnitude (sign comes from the chosen shot pose) and the
 // |goalAngle| (degrees) under which we are aimed well enough to kick.
-constexpr double kSpinSpeed          = 0.20;
+constexpr double kSpinSpeed          = 0.06;
 constexpr double kGoalAlignedDegrees = 12.0;
 
 // Orbit ball approach: when the ball is closer than this (cm) slow down and

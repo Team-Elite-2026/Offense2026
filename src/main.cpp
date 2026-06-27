@@ -1,242 +1,133 @@
 #include <Arduino.h>
-#include <CompassSensor.h>
-#include <Switches.h>
-#include <Callibration.h>
-#include <Movement.h>
-#include <orbit.h>
+#include <math.h>
+
 #include <Cam.h>
-#include <trig.h>
+#include <Callibration.h>
+#include <CompassSensor.h>
 #include <LinePCBComm.h>
 #include <ModeControl.h>
+#include <Movement.h>
+#include <OffenseStateMachine.h>
+#include <RobotConfig.h>
+#include <Switches.h>
+#include <orbit.h>
 
-constexpr double pincontrolFLA = 22;
-constexpr double pincontrolFLB = 23;
-constexpr double pinspeedFL    = 2;
-constexpr double pincontrolRLA = 18;
-constexpr double pincontrolRLB = 31;
-constexpr double pinspeedRL    = 4;
-constexpr double pincontrolFRA = 20;
-constexpr double pincontrolFRB = 21;
-constexpr double pinspeedFR    = 3;
-constexpr double pincontrolDribblerA = 11;
-constexpr double pincontrolDribblerB = 12;
-constexpr double pinspeedDribbler    = 6;
-constexpr double pincontrolRRA = 9;
-constexpr double pincontrolRRB = 10;
-constexpr double pinspeedRR    = 5;
+// Configure the active offense mode here while the automatic transitions are
+// still being developed.
+constexpr OffenseState kConfiguredOffenseState = OffenseState::Orbit;
 
-RobotMode kRobotMode = RobotMode::Offense;
-double defenseSpeedFactor = 0.26;
-double offenseSpeedFactor = 0.3;
-double lineAvoidanceSpeed = 0.15;
+// LidarLocalizer returns field-corner-origin coordinates in millimeters:
+// x = 0..1820 across field width, y = 0..2430 along field height.
+constexpr double kFieldWidthMm = 1820.0;
+constexpr double kFieldHeightMm = 2430.0;
+const Point kSpinShotTargetPose = {kFieldWidthMm * 0.5, kFieldHeightMm * 0.5, 0.0};
+
+RobotMode kRobotMode = defaultRobotMode;
 
 CompassSensor compassSensor;
 Switch switches;
 Calibration calibration(compassSensor);
-Motor FL(pincontrolFLA, pincontrolFLB, pinspeedFL);
-Motor FR(pincontrolFRA, pincontrolFRB, pinspeedFR);
-Motor BL(pincontrolRLA, pincontrolRLB, pinspeedRL);
-Motor BR(pincontrolRRA, pincontrolRRB, pinspeedRR);
-Movement movement(FL, FR, BL, BR, compassSensor);
+Motor* FL = nullptr;
+Motor* FR = nullptr;
+Motor* BL = nullptr;
+Motor* BR = nullptr;
+Movement* movement = nullptr;
 Orbit orbit(1);
 Cam camera;
 LinePCBComm linePCBComm(Serial2);
-ModeControl modeControl(Serial8, linePCBComm, compassSensor, movement, kRobotMode);
+ModeControl* modeControl = nullptr;
+OffenseStateMachine* offenseStateMachine = nullptr;
 
-double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
-bool aimingGoal;
-
-void setup()
+static void initializeDriveMotors()
 {
-  // if (kRobotMode == RobotMode::Offense) {
-  //   movement.myPID->SetTunings(0.3, movement.ki, movement.kd);
-  // }
-  // Serial.begin(9600);
-  // Serial.println("Testing Run");
-  // Serial3.begin(2000000);
-  // compassSensor.begin();
-  // compassSensor.callibrate();
-  // modeControl.begin(115200);
-  // modeControl.applyRobotModeSettings();
-  // linePCBComm.begin(1000000);
-  pinMode(30, OUTPUT);
-  digitalWrite(30, LOW);
-  // delay(100);
-  // digitalWrite(30, LOW);
+  pinMode(selectionPin, INPUT);
+  const bool useDefaultMotorLayout = digitalRead(selectionPin) == HIGH;
 
-
-}
-
-double getHomeGoalAngle()
-{
-  if (switches.goalSide())
+  if (useDefaultMotorLayout)
   {
-    return camera.yellowGoal;
-  }
-  return camera.blueGoal;
-}
-
-void runOffense()
-{
-  if (modeControl.state.lineCalibrationActive)
-  {
-    movement.stop();
-    calibration.calibrateCompassSensor();
-    Serial.println("Calibrating");
+    FL = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
+    FR = new Motor(pincontrolFRA, pincontrolFRB, pinspeedFR);
+    BL = new Motor(pincontrolRLA, pincontrolRLB, pinspeedRL);
+    BR = new Motor(pincontrolRRA, pincontrolRRB, pinspeedRR);
   }
   else
   {
-    // Serial.println("Testing Line Sensors");
-    linePCBComm.update();
-    camera.CamCalc();
-    lineAngle = linePCBComm.getLineAngle();
-
-    orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
-    if (modeControl.state.goalIsBlue)
-    {
-      Serial.println("blue goal");
-      goalAngle = camera.blueGoal;
-    }
-    else
-    {
-      Serial.println("yellow goal");
-      goalAngle = camera.yellowGoal;
-    }
-
-    if (goalAngle == -5)
-    {
-      goalAngle = 0;
-      aimingGoal = false;
-    }
-    else
-    {
-      aimingGoal = true;
-    }
-
-    // Serial.println("Offset: " + String(compassSensor.currentOffset()));
-    Serial.println("Line Angle: " + String(lineAngle));
-    Serial.println("Robot Angle: " + String(orbitAngle));
-    Serial.println("Ball Angle: " + String(camera.ballAngle));
-    Serial.println("Goal Angle: " + String(goalAngle));
-    Serial.println("Ball dist:" + String(camera.ballDist));
-    Serial.println("Robot Heading: " + String(compassSensor.currentOffset()));
-    // Serial.println("Orientation angle" + String(compassSensor.getOrientation()));
-    movement.kickBackground();
-    if (lineAngle == -5)
-    {
-      if (modeControl.isStartEnabled())
-      {
-        if (modeControl.doWeHaveBall())
-        {
-          // movement.movement(0, 0.2, goalDesiredFieldAngle, aimingGoal); 
-          if (fabs(goalAngle) < 5)
-          { // if close to goal angle, kick
-            Serial.println("KICKKKKKKKKKKKKKKK");
-            Serial.println();
-            movement.kick(); // wanna kick the ball to the goal
-          }
-        }
-        else if (camera.ballAngle != -5)
-        {
-          // movement.movement(orbitAngle, offenseSpeedFactor, 0, false); // wanna try to face dir of ball to get into dribbler so no trying to aim to the goal
-          movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal); // j using default orbit aiming towards the goal if seen
-        }
-        else
-        {
-          movement.stop();
-        }
-      }
-      else
-      {
-        movement.stop();
-
-      }
-    }
-    else
-    {
-      double avoidanceAngle = linePCBComm.getAvoidanceAngle();
-      Serial.println("Avoidance angle: " + String(avoidanceAngle));
-      if (modeControl.isStartEnabled())
-      {
-        movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0 , false); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
-      }
-      else
-      {
-        movement.stop();
-      }
-    }
+    BR = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
+    FR = new Motor(pincontrolFRA, pincontrolFRB, pinspeedFR);
+    FL = new Motor(pincontrolRLB, pincontrolRLA, pinspeedRL);
+    BL = new Motor(pincontrolRRB, pincontrolRRA, pinspeedRR);
   }
+}
+
+void setup()
+{
+  Serial.begin(9600);
+  Serial.println("Testing Run");
+  Serial3.begin(2000000);
+
+  compassSensor.begin();
+  compassSensor.callibrate();
+  linePCBComm.begin(1000000);
+
+  initializeDriveMotors();
+  movement = new Movement(*FL, *FR, *BL, *BR, compassSensor);
+  camera.setMovement(movement);
+  modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement, kRobotMode);
+  modeControl->begin(115200);
+  modeControl->applyRobotModeSettings();
+  offenseStateMachine = new OffenseStateMachine(
+    compassSensor,
+    calibration,
+    linePCBComm,
+    camera,
+    orbit,
+    *movement,
+    *modeControl);
 }
 
 // void runDefense()
 // {
 //   if (switches.calibration())
 //   {
-//     movement.stop();
-//     calibration.calibrateLineSensors();
+//     movement->stop();
 //     calibration.calibrateCompassSensor();
 //     Serial.println("Calibrating");
 //     return;
 //   }
-
-//   lineDetection.Calculate();
+//
 //   camera.CamCalc();
-//   lineAngle = lineDetection.getAngle();
-//   maxChordLength = lineDetection.getChordLengthFurthestPairNormalized();
-//   if (lineAngle != -5)
-//   {
-//     // Updates crossLine side memory based on angle wrap jumps.
-//     avoidanceAngle = lineDetection.avoidanceAngle();
-//     Serial.println("Avoidance Angle: " + String(avoidanceAngle));
-//   }
-//   bool crossLineState = lineDetection.getCrossLine();
-
-//   double homeGoalAngle = getHomeGoalAngle();
-//   movement.kickBackground();
-
-//   currentOffset = compassSensor.currentOffset();
-
-//   // Serial.println("Line Angle: " + String(lineAngle));
-//   // Serial.println("Ball Angle: " + String(camera.ballAngle));
-//   // Serial.println("Home Goal Angle: " + String(homeGoalAngle));
-//   // Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
-//   Serial.println("BALL DISTANCE: " + String(camera.ballDist));
-//   // Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
-//   // Serial.println("Current offset: " + String(currentOffset));
-
+//   movement->kickBackground();
+//
 //   if (!switches.start())
 //   {
-//     movement.stop();
+//     movement->stop();
 //     return;
 //   }
-
+//
 //   if (camera.ballAngle == -5)
 //   {
-//     movement.stop();
+//     movement->stop();
 //     return;
 //   }
-
-//   if (homeGoalAngle == -5)
-//   {
-//     movement.movement(camera.ballAngle, defenseSpeedFactor, 0, false);
-//     return;
-//   }
+//
+//   movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
 // }
-
 
 void loop()
 {
-  linePCBComm.update();
-  linePCBComm.setRobotHeadingDegrees(compassSensor.currentOffset());
-  modeControl.readCommands();
+  if (modeControl == nullptr || movement == nullptr || offenseStateMachine == nullptr)
+  {
+    return;
+  }
+
+  modeControl->readCommands();
 
   if (kRobotMode == RobotMode::Offense)
   {
-    runOffense();
+    offenseStateMachine->run(kConfiguredOffenseState, kSpinShotTargetPose);
   }
-  else
-  {
-    // runDefense();
-  }
-  modeControl.sendTelemetry(lineAngle, avoidanceAngle);
+
+  modeControl->sendTelemetry(
+    offenseStateMachine->lineAngle(),
+    offenseStateMachine->avoidanceAngle());
 }

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <Movement.h>
 using namespace std;
 Cam::Cam()
 {
@@ -14,7 +15,16 @@ Cam::Cam()
   derivative = -5;
   sampleTime = 0;
   buffer = "";
+  movement = NULL;
+  poseX = -5;
+  poseY = -5;
 }
+
+void Cam::setMovement(Movement* movement)
+{
+  this->movement = movement;
+}
+
 double Cam::CamCalc()
 {
   if (Serial3.available() > 0)
@@ -66,6 +76,21 @@ double Cam::CamCalc()
         buffer = "";
         derivativeSample = 0;
       }
+      else if (read == 'x')
+      {
+        poseX = strtod(buffer.c_str(), NULL);
+        buffer = "";
+      }
+      else if (read == 'y')
+      {
+        poseY = strtod(buffer.c_str(), NULL);
+        if (movement != NULL && poseX != -5 && poseY != -5)
+        {
+          movement->currentPose.x = poseX;
+          movement->currentPose.y = poseY;
+        }
+        buffer = "";
+      }
       else
       {
         buffer += read;
@@ -73,4 +98,5 @@ double Cam::CamCalc()
     }
     return 0;
   }
+  return 0;
 }

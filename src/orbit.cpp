@@ -25,20 +25,15 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     // Serial.print("calculated distance: ");
     // Serial.println(distance);
     // double dampenVal = min(1, 0.025 * exp(4.5 * distance));
-    double dampenVal = Trig::min(1, 0.02 * exp(4.5 * distance));
+    double dampenVal = Trig::min(1, 0.02 * exp(6 * distance));
     // Serial.print("dampen val: ");
     // Serial.println(dampenVal);
 
+    // takes absolute value of ball angle from 0 - 180 range
     double newballAngle = ballAngle > 180 ? (360 - ballAngle) : ballAngle;
     double orbitValue;
 
-
-    if(physicalRobot == 1){ // Offense
-        orbitValue = Trig::min(90, 2*M_PI * exp(0.05 * newballAngle));
-    }
-    else{ 
-        orbitValue = Trig::min(90, 8 * exp(0.033 * newballAngle));
-    }
+    orbitValue = Trig::min(90, 2*M_PI * exp(0.05 * newballAngle));
 
     double outputSum = orbitValue * dampenVal;
     if (dTerm > 3)
@@ -63,26 +58,4 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     // Serial.print("robot Angle: ");
     // Serial.println(robotAngle);
     return robotAngle;
-}
-
-double Orbit::GetToPosition(int targetX, int targetY, int currentX, int currentY)
-{
-
-    int relativex = -1;
-    int relativey = -1;
-    relativex = targetX - currentX;
-    relativey = targetY - currentY;
-    double distance = sqrt(pow(relativex, 2) + pow(relativey, 2));
-    if (distance <= 15)
-    {
-        return -1;
-    }
-    homeAngle = (atan2(relativex, relativey)) * 180/M_PI;
-    if (homeAngle < 0)
-    {
-        homeAngle = homeAngle + 360;
-    }
-    // Serial.print("home Angle: ");
-    // Serial.println(homeAngle);
-    return homeAngle;
 }

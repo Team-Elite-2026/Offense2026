@@ -2,6 +2,11 @@
 #include <math.h>
 #include <trig.h>
 
+namespace {
+constexpr double kPoseArrivalToleranceMm = 50.0;
+constexpr double kPoseFullSpeedDistanceMm = 600.0;
+constexpr double kPoseMaxSpeedFactor = 0.25;
+}
 
 Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor)
     : FLMotor(FLMotor), FRMotor(FRMotor), BLMotor(BLMotor), BRMotor(BRMotor), compassSensor(compassSensor)
@@ -174,3 +179,25 @@ void Movement::stop() {
     this->BRMotor.setSpeed(0);
 }
 
+void Movement::PlanToPose(Point desiredPose) {
+  this->currentPose.heading = compassSensor.currentOffset();
+  double speedfactor = computeSpeedFactor(this->currentPose, desiredPose);
+  if (speedfactor <= 0) {
+    this->stop();
+    return;
+  }
+  this->movement(Trig::getAngle(this->currentPose, desiredPose), speedfactor, desiredPose.heading, false);
+
+}
+
+double Movement::computeSpeedFactor(Point currentPose, Point desiredPose) {
+  double dist = Trig::getDist(currentPose, desiredPose);
+  if (dist <= kPoseArrivalToleranceMm) {
+    return 0;
+  }
+
+  double ramp = (dist - kPoseArrivalToleranceMm) /
+                (kPoseFullSpeedDistanceMm - kPoseArrivalToleranceMm);
+  ramp = fmax(0.0, fmin(1.0, ramp));
+  return kPoseMaxSpeedFactor * sqrt(ramp);
+}

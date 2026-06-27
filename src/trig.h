@@ -4,6 +4,7 @@
 struct Point {
     double x;
     double y;
+    double heading = 0;
 };
 
 class Trig {

@@ -4,6 +4,7 @@
 #include <Motor.h>
 #include <CompassSensor.h>
 #include <PID_v1.h>
+#include <trig.h>
 
 class Movement {
 private:
@@ -35,6 +36,10 @@ public:
     void stop();
     void kick();
     void kickBackground();
+    void PlanToPose(Point desiredPose);
+    double computeSpeedFactor(Point currentPose, Point desiredPose);
+
+    Point currentPose;
 
 
     double kp = 0.6;

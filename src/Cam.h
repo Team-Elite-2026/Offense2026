@@ -9,6 +9,8 @@
 #include <switches.h>
 #include <map>
 
+class Movement;
+
 class Cam
 {
 public:
@@ -20,11 +22,15 @@ public:
         double derivative;
         int sampleTime;
         double CamCalc();
+        void setMovement(Movement* movement);
         std::string buffer;
         bool inIntake;
 
 private:
         char read;
+        Movement* movement;
+        double poseX;
+        double poseY;
         double previousBallAngle;
         double previousBlueAngle;
         double previousYellowAngle;

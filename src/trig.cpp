@@ -54,7 +54,7 @@ double Trig::min(double a, double b) {
 double Trig::getAngle(Point p1, Point p2) {
     double dx = p2.x - p1.x;
     double dy = p2.y - p1.y;
-    double angle = toDegrees(atan2(dx, dy)) - p1.heading;
+    double angle = toDegrees(atan2(dx, -dy)) - p1.heading;
 
     while (angle < 0) {
         angle += 360;

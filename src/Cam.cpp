@@ -38,16 +38,16 @@ double Cam::CamCalc()
       {
         ballAngle = strtod(buffer.c_str(), NULL);
         buffer = "";
-        Serial.print("ball angle: ");
-        Serial.println(ballAngle);
+        // Serial.print("ball angle: ");
+        // Serial.println(ballAngle);
       }
       else if (read == 'a') {
         ballDist = strtod(buffer.c_str(), NULL);
         if (switches.lightgate())
           ballDist = 12;
         buffer = "";
-        Serial.print("ball dist: ");
-        Serial.println(ballDist);
+        // Serial.print("ball dist: ");
+        // Serial.println(ballDist);
       }
       else if (read == 'c')
       {
@@ -56,8 +56,8 @@ double Cam::CamCalc()
           blueGoal -= 360;
         }
         buffer = "";
-        Serial.print("blue: ");
-        Serial.println(blueGoal);
+        // Serial.print("blue: ");
+        // Serial.println(blueGoal);
       }
       else if (read == 'd')
       {
@@ -65,8 +65,8 @@ double Cam::CamCalc()
         if (yellowGoal > 180) {
           yellowGoal -= 360;
         }
-        Serial.print("yellow: ");
-        Serial.println(yellowGoal);
+        // Serial.print("yellow: ");
+        // Serial.println(yellowGoal);
         buffer = "";
       }
       else if (read == 'f')
@@ -79,16 +79,28 @@ double Cam::CamCalc()
       else if (read == 'x')
       {
         poseX = strtod(buffer.c_str(), NULL);
+        // Serial.print("poseX: ");
+        // Serial.println(poseX);
         buffer = "";
       }
       else if (read == 'y')
       {
         poseY = strtod(buffer.c_str(), NULL);
+        // Serial.print("poseY: ");
+        // Serial.println(poseY);
         if (movement != NULL && poseX != -5 && poseY != -5)
         {
           movement->currentPose.x = poseX;
           movement->currentPose.y = poseY;
+          // Serial.print("currentPose x: ");
+          // Serial.println(movement->currentPose.x);
+          // Serial.print("currentPose y: ");
+          // Serial.println(movement->currentPose.y);
         }
+        buffer = "";
+      }
+      else if (read == '\n' || read == '\r')
+      {
         buffer = "";
       }
       else

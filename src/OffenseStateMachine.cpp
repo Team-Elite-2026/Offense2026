@@ -42,11 +42,11 @@ void OffenseStateMachine::run(OffenseState configuredState, const Point& spinSho
     return;
   }
 
-  if (_lineAngle != -5)
-  {
-    runLineAvoidance();
-    return;
-  }
+  // if (_lineAngle != -5)
+  // {
+  //   runLineAvoidance();
+  //   return;
+  // }
 
   switch (configuredState)
   {

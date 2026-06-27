@@ -3,9 +3,10 @@
 #include <trig.h>
 
 namespace {
-constexpr double kPoseArrivalToleranceMm = 50.0;
-constexpr double kPoseFullSpeedDistanceMm = 600.0;
-constexpr double kPoseMaxSpeedFactor = 0.15; // TODO: TUNE AND FIX
+constexpr double kPoseArrivalToleranceMm  = 50.0;
+constexpr double kPoseFullSpeedDistanceMm = 250.0;
+constexpr double kPoseMinSpeedFactor      = 0.03;
+constexpr double kPoseMaxSpeedFactor      = 0.12;
 }
 
 Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor)
@@ -71,7 +72,6 @@ double Movement::findCorrectionRelOffset(double goalDirection) { // Makes the or
 
 // Need to add orientation to the movement function
 void Movement::movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool AimingGoal) {
-  Serial.println("Began Movement");
   intended_movement_angle -= 180;
 
   if (intended_movement_angle < 0) {
@@ -186,12 +186,25 @@ void Movement::PlanToPose(Point desiredPose) {
     this->stop();
     return;
   }
-  this->movement(Trig::getAngle(this->currentPose, desiredPose), speedfactor, desiredPose.heading, false);
+
+  double movementAngle = Trig::getAngle(this->currentPose, desiredPose);
+  Serial.print("Movement angle: ");
+  Serial.println(movementAngle);
+  this->movement(movementAngle, speedfactor, desiredPose.heading, false);
 
 }
 
 double Movement::computeSpeedFactor(Point currentPose, Point desiredPose) {
   double dist = Trig::getDist(currentPose, desiredPose);
+  Serial.print("Current pose: ");
+  Serial.print(currentPose.x);
+  Serial.print(", ");
+  Serial.println(currentPose.y);
+  Serial.print("Desired pose: ");
+  Serial.print(desiredPose.x);
+  Serial.print(", ");
+  Serial.println(desiredPose.y);
+  Serial.println("Distance: " + String(dist));
   if (dist <= kPoseArrivalToleranceMm) {
     return 0;
   }
@@ -199,5 +212,8 @@ double Movement::computeSpeedFactor(Point currentPose, Point desiredPose) {
   double ramp = (dist - kPoseArrivalToleranceMm) /
                 (kPoseFullSpeedDistanceMm - kPoseArrivalToleranceMm);
   ramp = fmax(0.0, fmin(1.0, ramp));
-  return kPoseMaxSpeedFactor * sqrt(ramp);
+  double answer = kPoseMinSpeedFactor * pow(kPoseMaxSpeedFactor / kPoseMinSpeedFactor, ramp);
+  Serial.print("Speed factor: ");
+  Serial.println(answer);
+  return answer;
 }

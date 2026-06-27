@@ -138,6 +138,13 @@ void OffenseStateMachine::runLineAvoidance()
 
 void OffenseStateMachine::runOrbitState()
 {
+    if (_lineAngle != -5)
+  {
+    Serial.println("Runnig line avoidance");
+    runLineAvoidance();
+    return;
+  }
+
   // ballDist is in cm; -5 means the ball is not currently seen.
   bool ballClose = (_camera.ballDist != -5) && (_camera.ballDist < kBallCloseCm);
 
@@ -155,9 +162,7 @@ void OffenseStateMachine::runOrbitState()
 
   if (_camera.ballAngle != -5)
   {
-    // Slow way down for the final approach so we can capture the ball.
-    double speedFactor = ballClose ? kBallApproachSpeed : offenseSpeedFactor;
-    _movement.movement(_orbitAngle, speedFactor, _goalAngle, _aimingGoal);
+    _movement.movement(_orbitAngle, offenseSpeedFactor, _goalAngle, _aimingGoal);
     return;
   }
 

@@ -47,7 +47,7 @@ public:
 
     double kp = 0.8;
     double ki = 0;
-    double kd = 0.00001;
+    double kd = 0.0001;
 
     PID* myPID;
 

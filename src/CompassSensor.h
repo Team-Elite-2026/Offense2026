@@ -7,7 +7,7 @@
 class CompassSensor {
     public:
     CompassSensor();
-    void callibrate();
+    void callibrate(Print* statusOutput = nullptr);
     void begin();
     int currentOffset();
     int getOrientation();

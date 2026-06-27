@@ -8,11 +8,19 @@ void setup()
   Serial.begin(9600);
   Serial.println("Testing Run");
   Serial3.begin(2000000);
+<<<<<<< Updated upstream
   compassSensor.begin();
   // compassSensor.callibrate();
   modeControl.begin(115200);
   modeControl.applyRobotModeSettings();
 
+=======
+  modeControl->begin(115200);
+  modeControl->sendBootMarker();
+  compassSensor.begin();
+  compassSensor.callibrate(modeControl->statusOutput());
+  modeControl->applyRobotModeSettings();
+>>>>>>> Stashed changes
 }
 
 double getHomeGoalAngle()

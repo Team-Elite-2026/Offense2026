@@ -9,7 +9,8 @@ ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _compassSensor(compassSensor),
     _movement(movement),
     _robotMode(robotMode),
-    _commandLength(0)
+    _commandLength(0),
+    _batteryVoltage(0.0f)
 {
   state = {true, false, false, false, false, false,
            StartMode::None, StartPosition::None, 0, 0};
@@ -20,6 +21,9 @@ void ModeControl::begin(uint32_t baud)
   _serial.begin(baud);
   pinMode(kStartPin, INPUT);
   pinMode(kLightGatePin, INPUT_PULLUP);
+  pinMode(kBatterySensePin, INPUT);
+  analogReadResolution(12);
+  analogReadAveraging(kBatterySampleCount);
 }
 
 void ModeControl::applyRobotModeSettings()
@@ -28,6 +32,17 @@ void ModeControl::applyRobotModeSettings()
   {
     _movement.myPID->SetTunings(0.3, _movement.ki, _movement.kd);
   }
+}
+
+void ModeControl::sendBootMarker()
+{
+  printLine("LCD:BOOT");
+  _serial.flush();
+}
+
+Print* ModeControl::statusOutput()
+{
+  return &_serial;
 }
 
 bool ModeControl::isStartEnabled() const
@@ -77,6 +92,30 @@ void ModeControl::sendLineArray()
   _serial.println();
 }
 
+float ModeControl::readBatteryVoltage()
+{
+  uint32_t rawTotal = 0;
+  for (uint8_t sample = 0; sample < kBatterySampleCount; sample++)
+  {
+    rawTotal += analogRead(kBatterySensePin);
+  }
+
+  const float rawAverage = (float)rawTotal / kBatterySampleCount;
+  const float measuredVoltage = rawAverage * (kAdcReferenceVolts / kAdcMaxValue) *
+                                kBatteryDividerScale;
+
+  if (_batteryVoltage <= 0.0f)
+  {
+    _batteryVoltage = measuredVoltage;
+  }
+  else
+  {
+    _batteryVoltage = (_batteryVoltage * 0.75f) + (measuredVoltage * 0.25f);
+  }
+
+  return _batteryVoltage;
+}
+
 void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
 {
   unsigned long now = millis();
@@ -90,7 +129,7 @@ void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
   printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(_robotMode) : "AUTO"));
   bool lightGateBlocked = digitalRead(kLightGatePin) == LOW;
   printLine(String("Light Gate: ") + (lightGateBlocked ? "BLOCKED" : "CLEAR"));
-  printLine("Battery: 12.0");
+  printLine(String("Battery: ") + String(readBatteryVoltage(), 1));
   printLine(state.lineCalibrationActive ? "Calibrating" : "Line Cal: IDLE");
   printLine("Orientation angle: " + String(_compassSensor.getOrientation()));
   printLine("Line Angle: " + String(lineAngle));

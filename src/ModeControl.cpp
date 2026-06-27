@@ -13,7 +13,7 @@ ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _batteryVoltage(0.0f)
 {
   state = {true, false, false, false, false, false,
-           StartMode::None, StartPosition::None, 0, 0};
+           StartMode::None, StartPosition::None, 0};
 }
 
 void ModeControl::begin(uint32_t baud)
@@ -114,20 +114,6 @@ float ModeControl::readBatteryVoltage()
   }
 
   return _batteryVoltage;
-}
-
-void ModeControl::sendTelemetry()
-{
-  unsigned long now = millis();
-  if (now - state.lastTelemetryMs < kTelemetryIntervalMs)
-  {
-    return;
-  }
-  state.lastTelemetryMs = now;
-
-  _serial.print("T,heading=");
-  _serial.print(_compassSensor.currentOffset());
-  _serial.println();
 }
 
 void ModeControl::sendCalibrationStatus()

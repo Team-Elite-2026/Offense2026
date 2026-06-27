@@ -29,7 +29,6 @@ struct ModeControlState
   bool hasStartPosition;
   StartMode startMode;
   StartPosition startPosition;
-  unsigned long lastTelemetryMs;
   unsigned long lastCalibrationStatusMs;
 };
 
@@ -42,7 +41,6 @@ public:
 
   void begin(uint32_t baud);
   void readCommands();
-  void sendTelemetry();
   void sendCalibrationStatus();
   void sendBootMarker();
   void applyRobotModeSettings();
@@ -64,7 +62,6 @@ private:
   static constexpr float         kAdcReferenceVolts           = 3.3f;
   static constexpr float         kAdcMaxValue                 = 4095.0f;
   static constexpr float         kBatteryDividerScale         = 4.3f;
-  static constexpr unsigned long kTelemetryIntervalMs         = 100;
   static constexpr unsigned long kCalibrationStatusIntervalMs = 250;
   static constexpr size_t        kCommandBufferSize           = 96;
 

@@ -20,6 +20,7 @@ constexpr OffenseState kConfiguredOffenseState = OffenseState::Orbit;
 // x = 0..1820 across field width, y = 0..2430 along field height.
 constexpr double kFieldWidthMm = 1820.0;
 constexpr double kFieldHeightMm = 2430.0;
+constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
 const Point kSpinShotTargetPose = {kFieldWidthMm * 0.5, kFieldHeightMm * 0.5, 0.0};
 
 RobotMode kRobotMode = defaultRobotMode;
@@ -37,6 +38,7 @@ Cam camera;
 LinePCBComm linePCBComm(Serial2);
 ModeControl* modeControl = nullptr;
 OffenseStateMachine* offenseStateMachine = nullptr;
+unsigned long lastPiHeadingTelemetryMs = 0;
 
 static void initializeDriveMotors()
 {
@@ -59,6 +61,20 @@ static void initializeDriveMotors()
   }
 }
 
+static void sendHeadingTelemetryToPi()
+{
+  const unsigned long now = millis();
+  if (now - lastPiHeadingTelemetryMs < kPiHeadingTelemetryIntervalMs)
+  {
+    return;
+  }
+  lastPiHeadingTelemetryMs = now;
+
+  Serial3.print("T,heading=");
+  Serial3.print(compassSensor.currentOffset());
+  Serial3.println();
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -66,7 +82,7 @@ void setup()
   Serial3.begin(2000000);
 
   compassSensor.begin();
-  compassSensor.callibrate();
+  calibration.calibrateCompassSensor();
   linePCBComm.begin(1000000);
 
   initializeDriveMotors();
@@ -127,5 +143,5 @@ void loop()
     offenseStateMachine->run(kConfiguredOffenseState, kSpinShotTargetPose);
   }
 
-  modeControl->sendTelemetry();
+  sendHeadingTelemetryToPi();
 }

@@ -2,8 +2,8 @@
 #include <Wire.h>
 #include <trig.h>
 
-CompassSensor::CompassSensor() {
-    
+CompassSensor::CompassSensor()
+  : zeroedAngle(0.0) {
 }
 
 static void printMagStatus(Print& output, uint8_t mag) {

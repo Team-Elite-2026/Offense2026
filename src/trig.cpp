@@ -45,7 +45,12 @@ double Trig::wrapAngle(double angle) {
     return angle;
 }
 
+
 double Trig::min(double a, double b) {
     return (a < b) ? a : b;
 
+}
+
+double Trig::getAngle(Point p1, Point p2) {
+    return atan2(p1.x-p2.x, p1.y-p2.y);
 }

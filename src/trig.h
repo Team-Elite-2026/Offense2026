@@ -18,6 +18,7 @@ public:
     static double dotProduct(int num1, int num2);
     static double wrapAngle(double angle);
     static double min(double a, double b);
+    static double getAngle(Point p1, Point p2); // Returns the angle between the vertical of p1 and p2
 };
 
 #endif

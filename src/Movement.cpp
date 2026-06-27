@@ -11,7 +11,6 @@ Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMoto
 
     myPID->SetOutputLimits(0, 100);
     myPID->SetSampleTime(2);
-    pinMode(kickerPin, OUTPUT);
 }
 
 double Movement::findCorrectionRelZero(double goalDirection) {

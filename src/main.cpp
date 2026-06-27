@@ -27,7 +27,7 @@ constexpr double pinspeedRR    = 5;
 
 RobotMode kRobotMode = RobotMode::Offense;
 double defenseSpeedFactor = 0.26;
-double offenseSpeedFactor = 0.22;
+double offenseSpeedFactor = 0.3;
 double lineAvoidanceSpeed = 0.15;
 
 CompassSensor compassSensor;
@@ -48,16 +48,22 @@ bool aimingGoal;
 
 void setup()
 {
-  if (kRobotMode == RobotMode::Offense) {
-    movement.myPID->SetTunings(0.3, movement.ki, movement.kd);
-  }
-  Serial.begin(9600);
-  Serial.println("Testing Run");
-  Serial3.begin(2000000);
-  compassSensor.begin();
+  // if (kRobotMode == RobotMode::Offense) {
+  //   movement.myPID->SetTunings(0.3, movement.ki, movement.kd);
+  // }
+  // Serial.begin(9600);
+  // Serial.println("Testing Run");
+  // Serial3.begin(2000000);
+  // compassSensor.begin();
   // compassSensor.callibrate();
-  modeControl.begin(115200);
-  modeControl.applyRobotModeSettings();
+  // modeControl.begin(115200);
+  // modeControl.applyRobotModeSettings();
+  // linePCBComm.begin(1000000);
+  pinMode(30, OUTPUT);
+  digitalWrite(30, LOW);
+  // delay(100);
+  // digitalWrite(30, LOW);
+
 
 }
 
@@ -84,6 +90,7 @@ void runOffense()
     linePCBComm.update();
     camera.CamCalc();
     lineAngle = linePCBComm.getLineAngle();
+
     orbitAngle = orbit.CalculateRobotAngle(camera.ballAngle, camera.ballDist);
     if (modeControl.state.goalIsBlue)
     {
@@ -124,13 +131,15 @@ void runOffense()
           // movement.movement(0, 0.2, goalDesiredFieldAngle, aimingGoal); 
           if (fabs(goalAngle) < 5)
           { // if close to goal angle, kick
+            Serial.println("KICKKKKKKKKKKKKKKK");
+            Serial.println();
             movement.kick(); // wanna kick the ball to the goal
           }
         }
         else if (camera.ballAngle != -5)
         {
-          movement.movement(orbitAngle, offenseSpeedFactor, 0, false); // wanna try to face dir of ball to get into dribbler so no trying to aim to the goal
-          // movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal); // j using default orbit aiming towards the goal if seen
+          // movement.movement(orbitAngle, offenseSpeedFactor, 0, false); // wanna try to face dir of ball to get into dribbler so no trying to aim to the goal
+          movement.movement(orbitAngle, offenseSpeedFactor, goalAngle, aimingGoal); // j using default orbit aiming towards the goal if seen
         }
         else
         {
@@ -140,13 +149,14 @@ void runOffense()
       else
       {
         movement.stop();
+
       }
     }
     else
     {
       double avoidanceAngle = linePCBComm.getAvoidanceAngle();
       Serial.println("Avoidance angle: " + String(avoidanceAngle));
-      if (switches.start())
+      if (modeControl.isStartEnabled())
       {
         movement.movement(avoidanceAngle, lineAvoidanceSpeed, 0 , false); // Not turning while avoiding line can cause extra rotation when goal scoring meaning we still want to correct when we're goal scoring
       }

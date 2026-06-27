@@ -45,9 +45,9 @@ public:
     Point currentPose;
 
 
-    double kp = 0.6;
+    double kp = 0.8;
     double ki = 0;
-    double kd = 0.000005;
+    double kd = 0.00001;
 
     PID* myPID;
 

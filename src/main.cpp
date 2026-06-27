@@ -14,7 +14,7 @@
 
 // Configure the active offense mode here while the automatic transitions are
 // still being developed.
-constexpr OffenseState kConfiguredOffenseState = OffenseState::PathPlan;
+constexpr OffenseState kConfiguredOffenseState = OffenseState::Orbit;
 
 constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
 
@@ -144,5 +144,6 @@ void loop()
   }
 
   sendHeadingTelemetryToPi();
+  linePCBComm.update();
   // delay(1000);
 }

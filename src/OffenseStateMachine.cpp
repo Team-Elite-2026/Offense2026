@@ -21,7 +21,7 @@ constexpr double kGoalAlignedDegrees = 12.0;
 // Orbit ball approach: when the ball is closer than this (cm) slow down and
 // start the dribbler to draw the ball in.
 constexpr double kBallCloseCm       = 15.0;
-constexpr double kBallApproachSpeed = 0.10;
+constexpr double kBallApproachSpeed = 0.2;
 
 // Dribbler PWM setpoints (0..255), converted to motor speed factors.
 constexpr double kDribblerApproachPwm = 96.0;   // closing on the ball in orbit
@@ -273,7 +273,7 @@ const ShotPose& OffenseStateMachine::selectNearestShotPose() const
 
 void OffenseStateMachine::resetSequence()
 {
-  _activeState = OffenseState::PathPlan;
+  _activeState = OffenseState::Orbit;
   _targetShotPose = nullptr;
 }
 

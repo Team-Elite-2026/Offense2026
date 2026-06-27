@@ -11,6 +11,8 @@ Cam::Cam()
   yellowGoal = -5;
   blueGoal = -5;
   ballDist = -5;
+  derivative = -5;
+  sampleTime = 0;
   buffer = "";
 }
 double Cam::CamCalc()
@@ -56,6 +58,13 @@ double Cam::CamCalc()
         Serial.print("yellow: ");
         Serial.println(yellowGoal);
         buffer = "";
+      }
+      else if (read == 'f')
+      {
+        sampleTime = derivativeSample;
+        derivative = strtod(buffer.c_str(), NULL);
+        buffer = "";
+        derivativeSample = 0;
       }
       else
       {

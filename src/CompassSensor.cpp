@@ -6,6 +6,12 @@ CompassSensor::CompassSensor() {
     
 }
 
+static void printMagStatus(Print& output, uint8_t mag) {
+    output.print("Mag: ");
+    output.print(mag);
+    output.println("/3");
+}
+
 void CompassSensor::begin() {
   Wire.begin();
     bno = Adafruit_BNO055(55, 0x28, &Wire2);
@@ -18,15 +24,21 @@ void CompassSensor::begin() {
   }
 }
 
-void CompassSensor::callibrate() {
+void CompassSensor::callibrate(Print* statusOutput) {
     uint8_t system, gyro, accel, mag = 0;
     bno.getCalibration(&system, &gyro, &accel, &mag);
     while (mag<3) {
-        Serial.print("Mag: ");
-        Serial.print(mag);
-        Serial.println("/3");
+        printMagStatus(Serial, mag);
+        if (statusOutput != nullptr) {
+            printMagStatus(*statusOutput, mag);
+        }
         delay(500);
         bno.getCalibration(&system, &gyro, &accel, &mag);
+    }
+
+    printMagStatus(Serial, 3);
+    if (statusOutput != nullptr) {
+        printMagStatus(*statusOutput, 3);
     }
 }
 

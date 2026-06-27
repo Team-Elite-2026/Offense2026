@@ -229,26 +229,14 @@ void loop()
   linePCBComm.update();
   linePCBComm.setRobotHeadingDegrees(compassSensor.currentOffset());
   modeControl.readCommands();
-  
-  
+
   if (kRobotMode == RobotMode::Offense)
   {
     runOffense();
-
-    
-
-    // Serial.println(modeControl.readCommands())
   }
   else
   {
     // runDefense();
   }
   modeControl.sendTelemetry(lineAngle, avoidanceAngle);
-
-  // for (int i = 0; i < 10; i++) {
-  //   Serial.println();
-  // }
-
-  // delay(200);
-
 }

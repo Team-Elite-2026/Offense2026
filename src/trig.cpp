@@ -52,9 +52,23 @@ double Trig::min(double a, double b) {
 }
 
 double Trig::getAngle(Point p1, Point p2) {
+    // Field frame (zeroed/centered): +y points toward the attacked goal (the
+    // direction the robot faces at zero heading) and +x is the robot's right at
+    // zero heading.
+    //
+    // movement() steers RELATIVE TO THE ROBOT'S BODY (0 = drive out the robot's
+    // front), not relative to the zeroed direction -- the wheels are fixed to the
+    // chassis and the heading correction only adds a rotation, never rotates the
+    // translation vector. So movement(a) drives toward field bearing (heading + a).
+    //
+    // The field bearing to the target, clockwise from +y, is atan2(dx, dy). To
+    // turn that into the body-relative command movement() needs, we subtract the
+    // robot's current heading (p1.heading, also clockwise from +y since heading 0
+    // faces the attacked goal). This stays correct at ANY heading -- including
+    // while PlanToPose is holding the robot at the shot pose's 180-degree heading.
     double dx = p2.x - p1.x;
     double dy = p2.y - p1.y;
-    double angle = toDegrees(atan2(dx, -dy));
+    double angle = toDegrees(atan2(dx, dy)) - p1.heading;
 
     while (angle < 0) {
         angle += 360;

@@ -9,9 +9,13 @@ namespace {
 // PathPlan: how close (mm) to the shot pose counts as "arrived".
 constexpr double kArrivalMarginMm = 30.0;
 
-// SpinShot: spin magnitude (sign comes from the chosen shot pose) and the
-// |goalAngle| (degrees) under which we are aimed well enough to kick.
-constexpr double kSpinSpeed          = 0.06;
+// SpinShot: while the goal is not yet in view we sweep at a fixed speed in the
+// chosen pose's search direction; once it is in view we close on it with a PID
+// whose spin speed scales with the heading error to the goal (capped so we never
+// spin violently and throw the ball).  kGoalAlignedDegrees is the |goalAngle|
+// (degrees) under which we are aimed well enough to kick.
+constexpr double kSpinSearchSpeed    = 0.06;
+constexpr double kSpinShotMaxSpeed   = 0.18;
 constexpr double kGoalAlignedDegrees = 12.0;
 
 // Orbit ball approach: when the ball is closer than this (cm) slow down and
@@ -221,7 +225,25 @@ void OffenseStateMachine::runSpinShotState()
 {
   // Keep the ball pinned at full dribble and spin toward the goal.
   _movement.setDribbler(pwmToFactor(kDribblerMaxPwm));
-  _movement.spin(_targetShotPose->spinSign * kSpinSpeed);
+
+  double spinFactor;
+  if (_aimingGoal)
+  {
+    // Goal is in view: drive the spin with the same PID the heading correction
+    // uses, so the spin speed scales with the heading error to the goal and the
+    // sign automatically turns us toward it.  _goalAngle is already robot/camera
+    // relative (0 = goal dead ahead), which is exactly what findCorrectionRelOffset
+    // expects.  Cap the magnitude so a large error cannot spin us violently.
+    spinFactor = _movement.findCorrectionRelOffset(_goalAngle);
+    spinFactor = fmax(-kSpinShotMaxSpeed, fmin(kSpinShotMaxSpeed, spinFactor));
+  }
+  else
+  {
+    // Goal not yet in view: sweep at a fixed speed in the pose's search direction
+    // until the camera picks the goal up.
+    spinFactor = _targetShotPose->spinSign * kSpinSearchSpeed;
+  }
+  _movement.spin(spinFactor);
 
   // Kick only once we actually see the goal and are aimed within tolerance.
   if (_aimingGoal && fabs(_goalAngle) < kGoalAlignedDegrees)
@@ -240,14 +262,13 @@ void OffenseStateMachine::runKickState()
 
 const ShotPose& OffenseStateMachine::selectNearestShotPose() const
 {
-  // Mode (goalIsBlue) decides which pair of shot poses we choose between.
-  const ShotPose& poseA = _modeControl.state.goalIsBlue ? kBlueShotPoseA : kYellowShotPoseA;
-  const ShotPose& poseB = _modeControl.state.goalIsBlue ? kBlueShotPoseB : kYellowShotPoseB;
+  // The pose frame is attack-relative (+y is always the attacked goal), so the
+  // same left/right pair works no matter which physical goal we attack -- no
+  // goalIsBlue branch needed.  Pick whichever side we are closer to.
+  double distLeft  = Trig::getDist(_movement.currentPose, kShotPoseLeft.pose);
+  double distRight = Trig::getDist(_movement.currentPose, kShotPoseRight.pose);
 
-  double distA = Trig::getDist(_movement.currentPose, poseA.pose);
-  double distB = Trig::getDist(_movement.currentPose, poseB.pose);
-
-  return (distA <= distB) ? poseA : poseB;
+  return (distRight <= distLeft) ? kShotPoseRight : kShotPoseLeft;
 }
 
 void OffenseStateMachine::resetSequence()

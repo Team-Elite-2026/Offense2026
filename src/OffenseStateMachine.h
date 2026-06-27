@@ -20,29 +20,36 @@ enum class OffenseState
   Kick,
 };
 
-// Field origin is the top-left corner, +x to the right, +y downward, in mm.
+// Field frame matches the pose the Pi sends: origin (0, 0) at the field center,
+// +y toward the attacked goal (the goal we face at zero heading), +x to the
+// robot's right at zero heading, in mm.
 constexpr double kFieldWidthMm  = 1820.0;
 constexpr double kFieldHeightMm = 2430.0;
 
 // A shooting pose plus the spin direction to use once the robot arrives.
-// spinSign is -1 (spin left) or +1 (spin right); used by SpinShot.
+// spinSign is -1 (spin left) or +1 (spin right); used by SpinShot's search.
 struct ShotPose
 {
   Point pose;
   double spinSign;
 };
 
-// The four shooting poses sit 450mm in x and 670mm in y inward from each field
-// corner. The two poses at y = 670 (nearer the top) are used when attacking the
-// yellow goal; the two at y = kFieldHeightMm - 670 are used for the blue goal.
-// All four face a heading of 180 degrees.
+// Because the frame is always attack-relative (+y is the attacked goal), there is
+// a single pair of shot poses regardless of which physical goal we attack.  They
+// sit 450mm in x inward from each side wall and 670mm in y inward from the
+// attacked-goal end:
+//   x = +/-(kFieldWidthMm/2 - 450) = +/-460,  y = kFieldHeightMm/2 - 670 = +545.
+// Both face heading 180 (kicker toward the attacked goal once the robot spins).
 constexpr double kShotPoseXOffsetMm = 450.0;
 constexpr double kShotPoseYOffsetMm = 670.0;
 
-constexpr ShotPose kYellowShotPoseA = { { kShotPoseXOffsetMm,                  kShotPoseYOffsetMm,                  180.0 }, -1.0 };
-constexpr ShotPose kYellowShotPoseB = { { kFieldWidthMm - kShotPoseXOffsetMm,  kShotPoseYOffsetMm,                  180.0 },  1.0 };
-constexpr ShotPose kBlueShotPoseA   = { { kShotPoseXOffsetMm,                  kFieldHeightMm - kShotPoseYOffsetMm, 180.0 },  1.0 };
-constexpr ShotPose kBlueShotPoseB   = { { kFieldWidthMm - kShotPoseXOffsetMm,  kFieldHeightMm - kShotPoseYOffsetMm, 180.0 }, -1.0 };
+constexpr double kShotPoseX = kFieldWidthMm * 0.5 - kShotPoseXOffsetMm;   //  460
+constexpr double kShotPoseY = kFieldHeightMm * 0.5 - kShotPoseYOffsetMm;  //  545
+
+// Right-side pose (+x) sweeps left, left-side pose (-x) sweeps right, so each
+// spins the ball toward the centre of the attacked goal.
+constexpr ShotPose kShotPoseRight = { {  kShotPoseX, kShotPoseY, 180.0 },  1.0 };
+constexpr ShotPose kShotPoseLeft  = { { -kShotPoseX, kShotPoseY, 180.0 }, -1.0 };
 
 class OffenseStateMachine
 {

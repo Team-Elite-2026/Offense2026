@@ -50,10 +50,10 @@ static void initializeDriveMotors()
   }
   else
   {
-    BR = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
+    FL = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
     FR = new Motor(pincontrolFRA, pincontrolFRB, pinspeedFR);
-    FL = new Motor(pincontrolRLB, pincontrolRLA, pinspeedRL);
-    BL = new Motor(pincontrolRRB, pincontrolRRA, pinspeedRR);
+    BL = new Motor(pincontrolRLB, pincontrolRLA, pinspeedRL);
+    BR = new Motor(pincontrolRRB, pincontrolRRA, pinspeedRR);
   }
 
   dribbler = new Motor(pincontrolDribblerA, pincontrolDribblerB, pinspeedDribbler);
@@ -166,6 +166,8 @@ void loop()
     runDefense();
   }
 
+  // BR->setSpeed(0.5);
+  // dribbler->setSpeed(0);
   sendHeadingTelemetryToPi();
   linePCBComm.update();
   // delay(1000);

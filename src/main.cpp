@@ -43,6 +43,7 @@ static void initializeDriveMotors()
 
   if (useDefaultMotorLayout)
   {
+    // Robot 2
     FL = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
     FR = new Motor(pincontrolFRA, pincontrolFRB, pinspeedFR);
     BL = new Motor(pincontrolRLA, pincontrolRLB, pinspeedRL);
@@ -50,6 +51,7 @@ static void initializeDriveMotors()
   }
   else
   {
+    //Robot 1
     FL = new Motor(pincontrolFLA, pincontrolFLB, pinspeedFL);
     FR = new Motor(pincontrolFRB, pincontrolFRA, pinspeedFR);
     BL = new Motor(pincontrolRLB, pincontrolRLA, pinspeedRL);

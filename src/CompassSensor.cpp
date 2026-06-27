@@ -13,7 +13,7 @@ static void printMagStatus(Print& output, uint8_t mag) {
 }
 
 void CompassSensor::begin() {
-  Wire.begin();
+  Wire2.begin();
     bno = Adafruit_BNO055(55, 0x28, &Wire2);
     if(!bno.begin())
   {

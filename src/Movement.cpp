@@ -9,8 +9,8 @@ constexpr double kPoseMinSpeedFactor      = 0.06;
 constexpr double kPoseMaxSpeedFactor      = 0.12;
 }
 
-Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor)
-    : FLMotor(FLMotor), FRMotor(FRMotor), BLMotor(BLMotor), BRMotor(BRMotor), compassSensor(compassSensor)
+Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, Motor& dribblerMotor, CompassSensor& compassSensor)
+    : FLMotor(FLMotor), FRMotor(FRMotor), BLMotor(BLMotor), BRMotor(BRMotor), dribblerMotor(dribblerMotor), compassSensor(compassSensor)
 {
     myPID = new PID(&Input, &Output, &Setpoint, kp, ki, kd, REVERSE);
     myPID->SetMode(AUTOMATIC);
@@ -147,6 +147,19 @@ void Movement::circle() {
     this->FRMotor.setSpeed(0.2);
     this->BLMotor.setSpeed(0.2);
     this->BRMotor.setSpeed(0.2);
+}
+
+// Spins the robot in place. Negative spinSpeed spins left, positive spins right.
+void Movement::spin(double spinSpeed) {
+    this->FLMotor.setSpeed(spinSpeed);
+    this->FRMotor.setSpeed(spinSpeed);
+    this->BLMotor.setSpeed(spinSpeed);
+    this->BRMotor.setSpeed(spinSpeed);
+}
+
+// Sets the dribbler motor. speedFactor is a normalized factor in [-1, 1] (PWM / 255).
+void Movement::setDribbler(double speedFactor) {
+    this->dribblerMotor.setSpeed(speedFactor);
 }
 
 void Movement::kick() {

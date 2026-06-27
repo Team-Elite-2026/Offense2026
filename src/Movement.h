@@ -12,6 +12,7 @@ private:
     Motor FRMotor;
     Motor BLMotor;
     Motor BRMotor;
+    Motor dribblerMotor;
 
     CompassSensor& compassSensor;
 
@@ -25,7 +26,7 @@ private:
 
 
 public:
-    Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, CompassSensor& compassSensor);
+    Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, Motor& dribblerMotor, CompassSensor& compassSensor);
     void movement(double intended_movement_angle, double speedfactor, double desiredOrientation, bool AimingGoal);
     double findCorrectionRelZero(double goalDirection);
     double findCorrectionRelOffset(double goalDirection);
@@ -33,6 +34,8 @@ public:
     double goalCorrection(double goalDirection);
     void rotateToGoal(double goalDirection, double speedFactor);
     void circle();
+    void spin(double spinSpeed);
+    void setDribbler(double speedFactor);
     void stop();
     void kick();
     void kickBackground();

@@ -14,14 +14,9 @@
 
 // Configure the active offense mode here while the automatic transitions are
 // still being developed.
-constexpr OffenseState kConfiguredOffenseState = OffenseState::SpinShot;
+constexpr OffenseState kConfiguredOffenseState = OffenseState::PathPlan;
 
-// LidarLocalizer returns field-corner-origin coordinates in millimeters:
-// x = 0..1820 across field width, y = 0..2430 along field height.
-constexpr double kFieldWidthMm = 1820.0;
-constexpr double kFieldHeightMm = 2430.0;
 constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
-const Point kSpinShotTargetPose = {kFieldWidthMm * 0.5, kFieldHeightMm * 0.5, 0.0};
 
 RobotMode kRobotMode = defaultRobotMode;
 
@@ -32,6 +27,7 @@ Motor* FL = nullptr;
 Motor* FR = nullptr;
 Motor* BL = nullptr;
 Motor* BR = nullptr;
+Motor* dribbler = nullptr;
 Movement* movement = nullptr;
 Orbit orbit(1);
 Cam camera;
@@ -59,6 +55,8 @@ static void initializeDriveMotors()
     FL = new Motor(pincontrolRLB, pincontrolRLA, pinspeedRL);
     BL = new Motor(pincontrolRRB, pincontrolRRA, pinspeedRR);
   }
+
+  dribbler = new Motor(pincontrolDribblerA, pincontrolDribblerB, pinspeedDribbler);
 }
 
 static void sendHeadingTelemetryToPi()
@@ -81,13 +79,13 @@ void setup()
   Serial.println("Testing Run");
   Serial3.begin(2000000);
 
-  compassSensor.callibrate();
+  // compassSensor.callibrate();
   compassSensor.begin();
   calibration.calibrateCompassSensor();
   linePCBComm.begin(1000000);
 
   initializeDriveMotors();
-  movement = new Movement(*FL, *FR, *BL, *BR, compassSensor);
+  movement = new Movement(*FL, *FR, *BL, *BR, *dribbler, compassSensor);
   camera.setMovement(movement);
   modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement, kRobotMode);
   modeControl->begin(115200);
@@ -140,7 +138,9 @@ void loop()
 
   if (kRobotMode == RobotMode::Offense)
   {
-    offenseStateMachine->run(kConfiguredOffenseState, kSpinShotTargetPose);
+    offenseStateMachine->run(kConfiguredOffenseState);
+  } else {
+    runDefense();
   }
 
   sendHeadingTelemetryToPi();

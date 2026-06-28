@@ -175,7 +175,6 @@ void LinePCBComm::onPacket(uint8_t type, const uint8_t* payload, uint16_t len) {
         _chordLength    = p.chordLength;
         _rawCrossLine   = (p.crossLine != 0);
         recomputeResolvedState();
-        Serial.println(p.chordLength);
     } else if (type == LPKT_DEBUG && len >= (uint16_t)sizeof(LinePCBDebugPkt)) {
         LinePCBDebugPkt p;
         memcpy(&p, payload, sizeof(p));

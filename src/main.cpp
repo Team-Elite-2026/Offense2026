@@ -177,9 +177,10 @@ void runDefense()
 
   double virtualBoundaryAngle = -1.0;
   bool hasPose = movement->currentPose.x != -5 && movement->currentPose.y != -5;
+  Serial.println("Current Pose: " + String(movement->currentPose.x) + ", " + String(movement->currentPose.y));
   bool outsideVirtualBoundary = hasPose &&
       virtualBoundary.getAvoidanceAngle(movement->currentPose, currentOffset, virtualBoundaryAngle);
-      
+
   if (outsideVirtualBoundary)
   {
     if (virtualBoundaryDebugEnabled)

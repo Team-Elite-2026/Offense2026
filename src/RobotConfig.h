@@ -28,11 +28,11 @@ constexpr double lineAvoidanceSpeed  = 0.15;
 // Virtual rectangle boundary in the same field coordinate frame as
 // Movement::currentPose (millimeters). This acts like an imaginary white line.
 constexpr bool virtualBoundaryDebugEnabled = true;
-constexpr bool virtualBoundaryDriveEnabled = false;
-constexpr double virtualBoundaryMinX = -700.0;
-constexpr double virtualBoundaryMaxX = 700.0;
-constexpr double virtualBoundaryMinY = -950.0;
-constexpr double virtualBoundaryMaxY = 950.0;
+constexpr bool virtualBoundaryDriveEnabled = true;
+constexpr double virtualBoundaryMinX = -500.0;
+constexpr double virtualBoundaryMaxX = 500.0;
+constexpr double virtualBoundaryMinY = -1000.0;
+constexpr double virtualBoundaryMaxY = -820.0;
 constexpr double virtualBoundaryAvoidanceSpeed = 0.15;
 
 #endif

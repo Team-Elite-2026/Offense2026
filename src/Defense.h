@@ -23,11 +23,7 @@ private:
     double sidewaysHeadingTolerance = 7.0;
     elapsedMillis hardStop;
 
-    static double normalize360(double angle);
-    static double normalize180(double angle);
-    static double angularDistance(double a, double b);
     static double projectAngle(double lineNormalAngle, double movementAngle);
-    static double clamp01(double value);
     static double clampDefenseMoveAngle(double movementAngle);
     static double blendTangentWithNormal(double tangentAngle,
                                          double lineNormalAngle,

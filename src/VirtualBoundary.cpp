@@ -7,19 +7,6 @@ VirtualBoundary::VirtualBoundary(const VirtualBoundaryBounds& bounds)
     : _bounds(bounds) {
 }
 
-double VirtualBoundary::normalize360(double angle)
-{
-    while (angle < 0.0)
-    {
-        angle += 360.0;
-    }
-    while (angle >= 360.0)
-    {
-        angle -= 360.0;
-    }
-    return angle;
-}
-
 bool VirtualBoundary::contains(const Point& currentPose) const
 {
     return currentPose.x >= _bounds.minX &&
@@ -65,6 +52,6 @@ bool VirtualBoundary::getAvoidanceAngle(const Point& currentPose,
     Serial.println("Field Avoidance Angle: "); 
     Serial.println(Trig::toDegrees(atan2(fieldX, fieldY)));
     double fieldAvoidanceAngle = Trig::toDegrees(atan2(fieldX, fieldY));
-    robotRelativeAvoidanceAngle = normalize360(fieldAvoidanceAngle - robotHeadingDegrees);
+    robotRelativeAvoidanceAngle = Trig::normalize360(fieldAvoidanceAngle - robotHeadingDegrees);
     return true;
 }

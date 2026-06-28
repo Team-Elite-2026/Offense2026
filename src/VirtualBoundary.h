@@ -22,8 +22,6 @@ public:
 
 private:
     VirtualBoundaryBounds _bounds;
-
-    static double normalize360(double angle);
 };
 
 #endif

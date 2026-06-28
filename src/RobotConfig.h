@@ -28,11 +28,21 @@ constexpr double lineAvoidanceSpeed  = 0.15;
 // Virtual rectangle boundary in the same field coordinate frame as
 // Movement::currentPose (millimeters). This acts like an imaginary white line.
 constexpr bool virtualBoundaryDebugEnabled = true;
-constexpr bool virtualBoundaryDriveEnabled = true;
+constexpr bool virtualBoundaryDriveEnabled = false;
 constexpr double virtualBoundaryMinX = -500.0;
 constexpr double virtualBoundaryMaxX = 500.0;
 constexpr double virtualBoundaryMinY = -1000.0;
 constexpr double virtualBoundaryMaxY = -820.0;
 constexpr double virtualBoundaryAvoidanceSpeed = 0.15;
+
+constexpr bool goalieCurveDebugEnabled = true;
+constexpr bool goalieCurveDriveEnabled = false;
+constexpr double goalieCurveMinOffsetMm = 60.0;
+constexpr double goalieCurveMaxOffsetMm = 120.0;
+constexpr double goalieCurveRampDistanceMm = 80.0;
+constexpr double goalieCurveHardMinOffsetMm = 30.0;
+constexpr double goalieCurveHardMaxOffsetMm = 180.0;
+constexpr double goalieCurveBoundaryWeight = 1.0;
+constexpr double defenseBallDeadbandDegrees = 5.0;
 
 #endif

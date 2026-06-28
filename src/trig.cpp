@@ -39,6 +39,38 @@ double Trig::getDist(Point p1, Point p2) {
 //     return (x1 * x2) + (y1* y2);
 // }
 
+double Trig::clamp(double value, double minValue, double maxValue) {
+    if (value < minValue) {
+        return minValue;
+    }
+    if (value > maxValue) {
+        return maxValue;
+    }
+    return value;
+}
+
+double Trig::normalize360(double angle) {
+    while (angle < 0) {
+        angle += 360;
+    }
+    while (angle >= 360) {
+        angle -= 360;
+    }
+    return angle;
+}
+
+double Trig::normalize180(double angle) {
+    angle = normalize360(angle);
+    if (angle > 180) {
+        angle -= 360;
+    }
+    return angle;
+}
+
+double Trig::angularDistance(double a, double b) {
+    return fabs(normalize180(a - b));
+}
+
 double Trig::wrapAngle(double angle) {
     if (angle < -180) angle += 360;
     if (angle >   180) angle -= 360;

@@ -4,6 +4,7 @@
 #include <Cam.h>
 #include <Callibration.h>
 #include <CompassSensor.h>
+#include <GoalieCurveBoundary.h>
 #include <LinePCBComm.h>
 #include <ModeControl.h>
 #include <Movement.h>
@@ -12,6 +13,7 @@
 #include <VirtualBoundary.h>
 #include <orbit.h>
 #include <Defense.h>
+#include <trig.h>
 
 // Configure the active offense mode here while the automatic transitions are
 // still being developed.
@@ -42,6 +44,14 @@ VirtualBoundaryBounds virtualBoundaryBounds = {
   virtualBoundaryMaxY
 };
 VirtualBoundary virtualBoundary(virtualBoundaryBounds);
+GoalieCurveBoundaryConfig goalieCurveBoundaryConfig = {
+  goalieCurveMinOffsetMm,
+  goalieCurveMaxOffsetMm,
+  goalieCurveRampDistanceMm,
+  goalieCurveHardMinOffsetMm,
+  goalieCurveHardMaxOffsetMm
+};
+GoalieCurveBoundary goalieCurveBoundary(goalieCurveBoundaryConfig);
 unsigned long lastPiHeadingTelemetryMs = 0;
 double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
 static void initializeDriveMotors()
@@ -135,7 +145,7 @@ void setup()
     *modeControl);
 }
 
-int getHomeGoalAngle() {
+double getHomeGoalAngle() {
   if (modeControl->isGoalBlueSelected()) {
     return camera.yellowGoal;
   } 
@@ -145,7 +155,7 @@ int getHomeGoalAngle() {
 void runDefense()
 {
   offenseStateMachine->updateVisionAndLineState();
-  
+
   lineAngle = linePCBComm.getLineAngle();
   maxChordLength = linePCBComm.getChordLength();
   if (lineAngle != -5)
@@ -175,53 +185,101 @@ void runDefense()
     return;
   }
 
-  double virtualBoundaryAngle = -1.0;
   bool hasPose = movement->currentPose.x != -5 && movement->currentPose.y != -5;
-  Serial.println("Current Pose: " + String(movement->currentPose.x) + ", " + String(movement->currentPose.y));
-  bool outsideVirtualBoundary = hasPose &&
-      virtualBoundary.getAvoidanceAngle(movement->currentPose, currentOffset, virtualBoundaryAngle);
-
-  if (outsideVirtualBoundary)
+  if (hasPose)
   {
-    if (virtualBoundaryDebugEnabled)
-    {
-      Serial.println("Virtual Boundary Active");
-      Serial.println("Virtual Boundary Pose X: " + String(movement->currentPose.x));
-      Serial.println("Virtual Boundary Pose Y: " + String(movement->currentPose.y));
-      Serial.println("Virtual Boundary Move Angle: " + String(virtualBoundaryAngle));
-    }
+    double virtualBoundaryAngle = -1.0;
+    bool outsideVirtualBoundary =
+        virtualBoundary.getAvoidanceAngle(movement->currentPose, currentOffset, virtualBoundaryAngle);
 
-    if (virtualBoundaryDriveEnabled)
+    if (outsideVirtualBoundary)
     {
-      movement->movement(virtualBoundaryAngle, virtualBoundaryAvoidanceSpeed, currentOffset, false);
-      return;
+      if (virtualBoundaryDebugEnabled)
+      {
+        Serial.println("Virtual Boundary Active");
+        Serial.println("Virtual Boundary Pose X: " + String(movement->currentPose.x));
+        Serial.println("Virtual Boundary Pose Y: " + String(movement->currentPose.y));
+        Serial.println("Virtual Boundary Move Angle: " + String(virtualBoundaryAngle));
+      }
+
+      if (virtualBoundaryDriveEnabled)
+      {
+        movement->movement(virtualBoundaryAngle, virtualBoundaryAvoidanceSpeed, currentOffset, false);
+        return;
+      }
     }
   }
 
+  GoalieCurveBoundaryResult goalieCurveResult;
+  bool hasGoalieCurveResult = false;
+  if (hasPose)
+  {
+    goalieCurveResult = goalieCurveBoundary.evaluate(movement->currentPose, currentOffset);
+    hasGoalieCurveResult = true;
+  }
+
+  bool goalieCurveCanDrive = hasGoalieCurveResult &&
+                             goalieCurveDriveEnabled &&
+                             goalieCurveResult.hasCorrection();
+
   if (camera.ballAngle == -5)
   {
+    if (goalieCurveCanDrive && goalieCurveResult.hardRecovery)
+    {
+      if (goalieCurveDebugEnabled)
+      {
+        goalieCurveBoundary.printDebug(goalieCurveResult, goalieCurveResult.correctionRobotAngle);
+      }
+      movement->movement(goalieCurveResult.correctionRobotAngle,
+                         defenseSpeedFactor,
+                         currentOffset,
+                         false);
+      return;
+    }
+
     movement->stop();
     return;
   }
 
-  if (homeGoalAngle == -5)
-  {
-    movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
-    return;
-  }
+  bool ballInDeadband = Trig::angularDistance(camera.ballAngle, 0.0) <= defenseBallDeadbandDegrees;
+  bool defenseMovementActive = !ballInDeadband;
+  double defenseMoveAngle = -1.0;
 
-  double defenseMoveAngle = defense.defenseCalc(
-      camera.ballAngle,
-      homeGoalAngle,
-      currentOffset,
-      lineAngle,
-      maxChordLength,
-      crossLineState);
+  if (defenseMovementActive)
+  {
+    if (homeGoalAngle == -5)
+    {
+      defenseMoveAngle = Trig::normalize360(camera.ballAngle);
+    }
+    else
+    {
+      defenseMoveAngle = defense.defenseCalc(
+          camera.ballAngle,
+          homeGoalAngle,
+          currentOffset,
+          lineAngle,
+          maxChordLength,
+          crossLineState);
+    }
+  }
 
   // Serial.println("Defense Move angle: " + String(defenseMoveAngle));
 
-  if (defenseMoveAngle < 0)
+  if (defenseMovementActive && defenseMoveAngle < 0)
   {
+    if (goalieCurveCanDrive && goalieCurveResult.hardRecovery)
+    {
+      if (goalieCurveDebugEnabled)
+      {
+        goalieCurveBoundary.printDebug(goalieCurveResult, goalieCurveResult.correctionRobotAngle);
+      }
+      movement->movement(goalieCurveResult.correctionRobotAngle,
+                         defenseSpeedFactor,
+                         currentOffset,
+                         false);
+      return;
+    }
+
     movement->stop();
     return;
   }
@@ -254,24 +312,51 @@ void runDefense()
     Serial.println("Field Relative Desired Heading: " + String(desiredPerpendicularHeading));
   }
 
-  if (desiredHeadingInBadZone) {
+  bool hasMoveCommand = defenseMovementActive;
+  double finalMoveAngle = defenseMoveAngle;
+
+  if (hasGoalieCurveResult && goalieCurveResult.hasCorrection())
+  {
+    double blendedRobotAngle = hasMoveCommand
+        ? goalieCurveBoundary.blendWithDefenseAngle(
+            defenseMoveAngle,
+            currentOffset,
+            goalieCurveBoundaryWeight,
+            goalieCurveResult)
+        : goalieCurveResult.correctionRobotAngle;
+
+    if (goalieCurveDebugEnabled)
+    {
+      goalieCurveBoundary.printDebug(goalieCurveResult, blendedRobotAngle);
+    }
+
+    if (goalieCurveDriveEnabled)
+    {
+      finalMoveAngle = goalieCurveResult.hardRecovery
+          ? goalieCurveResult.correctionRobotAngle
+          : blendedRobotAngle;
+      hasMoveCommand = true;
+    }
+  }
+
+  if (!hasMoveCommand)
+  {
+    movement->stop();
+    return;
+  }
+
+  if (desiredHeadingInBadZone)
+  {
     Serial.println("YOU ARE APPROACHING A BAD ZONE");
-    if ((desiredPerpendicularHeading >= badZoneHeadingLimit && abs(defenseMoveAngle - 90) <  30) || 
-    (desiredPerpendicularHeading <= badZoneHeadingLimit && abs(defenseMoveAngle - 270) <  30)
-    ) {
+    if ((desiredPerpendicularHeading >= badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 90.0) < 30.0) ||
+        (desiredPerpendicularHeading <= -badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 270.0) < 30.0))
+    {
       movement->stop();
       return;
     }
   }
 
-  // Serial.println("Moving to Defense Position");
-  // Serial.println("Defense Move Angle: " + String(defenseMoveAngle));
-  // Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
-  // Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
-
-
-
-  movement->movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
+  movement->movement(finalMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
 void loop()

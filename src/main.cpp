@@ -160,7 +160,7 @@ void runDefense()
   Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
   Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
   Serial.println("Current offset: " + String(currentOffset));
-
+  Serial.println("Ball Angle: " + String(camera.ballAngle));
   if (!switches.start())
   {
     movement->stop();
@@ -189,17 +189,19 @@ void runDefense()
 
   Serial.println("Defense Move angle: " + String(defenseMoveAngle));
 
-  if (defenseMoveAngle < 0)
-  {
-    movement->stop();
-    return;
-  }
+  // if (defenseMoveAngle < 0)
+  // {
+  //   movement->stop();
+  //   return;
+  // }
 
   double desiredPerpendicularHeading = 0.0;
   bool desiredHeadingInBadZone = false;
   const double badZoneHeadingLimit = 53.0;
+  // Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
   if (lineAngle != -5)
   {
+    Serial.println("HELLOOooOoOooo");
     double relNormalA = Trig::wrapAngle(lineAngle);
     double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
     double fieldNormalA = compassSensor.robotRelativeToField(relNormalA);
@@ -231,9 +233,11 @@ void runDefense()
     }
   }
 
-  movement->movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
-
+  Serial.println("Moving to Defense Position");
+  Serial.println("Defense Move Angle: " + String(defenseMoveAngle));
+  Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
   Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
+  movement->movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
 void loop()

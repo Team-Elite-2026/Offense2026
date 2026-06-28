@@ -111,8 +111,6 @@ double Defense::defenseCalc(double ballAngle,
             defenseAngle = -1;
         }
 
-        Serial.print("defense Angle: ");
-        Serial.println(defenseAngle);
         return defenseAngle;
     }
 

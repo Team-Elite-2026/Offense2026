@@ -6,10 +6,13 @@
 #include <algorithm>
 #include <ModeControl.h>
 #include <Movement.h>
+#include <RobotConfig.h>
+#include <trig.h>
 using namespace std;
 Cam::Cam()
 {
   ballAngle = -5;
+  predictedBallAngle = -5;
   yellowGoal = -5;
   blueGoal = -5;
   ballDist = -5;
@@ -30,6 +33,31 @@ void Cam::setMovement(Movement* movement)
 void Cam::setModeControl(ModeControl* modeControl)
 {
   this->modeControl = modeControl;
+}
+
+double Cam::selectedDefenseBallAngle() const
+{
+  if (!usePredictedBallAngleForDefense)
+  {
+    return ballAngle;
+  }
+
+  if (predictedBallAngle == -5)
+  {
+    return ballAngle;
+  }
+
+  if (ballAngle == -5)
+  {
+    return predictedBallAngle;
+  }
+
+  if (Trig::angularDistance(ballAngle, predictedBallAngle) > predictedBallAngleMaxDeltaDegrees)
+  {
+    return ballAngle;
+  }
+
+  return predictedBallAngle;
 }
 
 double Cam::CamCalc()
@@ -74,6 +102,14 @@ double Cam::CamCalc()
         }
         // Serial.print("yellow: ");
         // Serial.println(yellowGoal);
+        buffer = "";
+      }
+      else if (read == 'p')
+      {
+        predictedBallAngle = strtod(buffer.c_str(), NULL);
+        if (predictedBallAngle > 180) {
+          predictedBallAngle -= 360;
+        }
         buffer = "";
       }
       else if (read == 'f')

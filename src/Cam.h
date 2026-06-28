@@ -18,10 +18,12 @@ public:
         double yellowGoal;
         double blueGoal;
         double ballAngle;
+        double predictedBallAngle;
         double ballDist;
         double derivative;
         int sampleTime;
         double CamCalc();
+        double selectedDefenseBallAngle() const;
         void setMovement(Movement* movement);
         void setModeControl(ModeControl* modeControl);
         std::string buffer;

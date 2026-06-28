@@ -221,8 +221,9 @@ void runDefense()
   bool goalieCurveCanDrive = hasGoalieCurveResult &&
                              goalieCurveDriveEnabled &&
                              goalieCurveResult.hasCorrection();
+  double defenseBallAngle = camera.selectedDefenseBallAngle();
 
-  if (camera.ballAngle == -5)
+  if (defenseBallAngle == -5)
   {
     if (goalieCurveCanDrive && goalieCurveResult.hardRecovery)
     {
@@ -241,7 +242,7 @@ void runDefense()
     return;
   }
 
-  bool ballInDeadband = Trig::angularDistance(camera.ballAngle, 0.0) <= defenseBallDeadbandDegrees;
+  bool ballInDeadband = Trig::angularDistance(defenseBallAngle, 0.0) <= defenseBallDeadbandDegrees;
   bool defenseMovementActive = !ballInDeadband;
   double defenseMoveAngle = -1.0;
 
@@ -249,12 +250,12 @@ void runDefense()
   {
     if (homeGoalAngle == -5)
     {
-      defenseMoveAngle = Trig::normalize360(camera.ballAngle);
+      defenseMoveAngle = Trig::normalize360(defenseBallAngle);
     }
     else
     {
       defenseMoveAngle = defense.defenseCalc(
-          camera.ballAngle,
+          defenseBallAngle,
           homeGoalAngle,
           currentOffset,
           lineAngle,
@@ -263,6 +264,9 @@ void runDefense()
     }
   }
 
+  // Serial.println("Raw Ball Angle: " + String(camera.ballAngle));
+  // Serial.println("Predicted Ball Angle: " + String(camera.predictedBallAngle));
+  // Serial.println("Defense Ball Angle: " + String(defenseBallAngle));
   // Serial.println("Defense Move angle: " + String(defenseMoveAngle));
 
   if (defenseMovementActive && defenseMoveAngle < 0)

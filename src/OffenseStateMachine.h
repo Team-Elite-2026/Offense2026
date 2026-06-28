@@ -67,6 +67,8 @@ public:
 
   double lineAngle() const { return _lineAngle; }
   double avoidanceAngle() const { return _avoidanceAngle; }
+  void updateVisionAndLineState();
+
 
 private:
   CompassSensor& _compassSensor;
@@ -92,7 +94,6 @@ private:
   // Times how long DribblerToKick has held the dribbler at full speed.
   elapsedMillis _dribblerToKickTimer;
 
-  void updateVisionAndLineState();
   void runLineAvoidance();
   void runOrbitState();
 

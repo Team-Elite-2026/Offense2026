@@ -21,7 +21,8 @@ static constexpr uint8_t  LPKT_CMD   = 0x10;
 struct LinePCBDataPkt {
     float   lineAngle;       // degrees; -5 = no line
     float   avoidanceAngle;  // degrees; -5 = no line
-
+    float   mouseVx;         // m/s, body-frame +right
+    float   mouseVy;         // m/s, body-frame +forward
     float   chordLength;     // normalised [0,1]; -5 if < 2 sensors active
     uint8_t crossLine;
     uint8_t _pad[3];

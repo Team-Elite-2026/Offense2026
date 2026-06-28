@@ -11,6 +11,7 @@
 #include <RobotConfig.h>
 #include <Switches.h>
 #include <orbit.h>
+#include <Defense.h>
 
 // Configure the active offense mode here while the automatic transitions are
 // still being developed.
@@ -29,13 +30,14 @@ Motor* BL = nullptr;
 Motor* BR = nullptr;
 Motor* dribbler = nullptr;
 Movement* movement = nullptr;
+Defense defense;
 Orbit orbit(1);
 Cam camera;
 LinePCBComm linePCBComm(Serial2);
 ModeControl* modeControl = nullptr;
 OffenseStateMachine* offenseStateMachine = nullptr;
 unsigned long lastPiHeadingTelemetryMs = 0;
-
+double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
 static void initializeDriveMotors()
 {
   pinMode(selectionPin, INPUT);
@@ -126,18 +128,38 @@ void setup()
     *modeControl);
 }
 
+int getHomeGoalAngle() {
+  if (modeControl->isGoalBlueSelected()) {
+    return camera.blueGoal;
+  } 
+  return camera.yellowGoal;
+}
+
 void runDefense()
 {
-  if (switches.calibration())
+  offenseStateMachine->updateVisionAndLineState();
+  
+  lineAngle = linePCBComm.getLineAngle();
+  maxChordLength = linePCBComm.getChordLength();
+  if (lineAngle != -5)
   {
-    movement->stop();
-    calibration.calibrateCompassSensor();
-    Serial.println("Calibrating");
-    return;
+    // Updates crossLine side memory based on angle wrap jumps.
+    avoidanceAngle = linePCBComm.getAvoidanceAngle();
+    Serial.println("Avoidance Angle: " + String(avoidanceAngle));
   }
+  bool crossLineState = linePCBComm.getCrossLine();
 
-  camera.CamCalc();
+  double homeGoalAngle = getHomeGoalAngle();
   movement->kickBackground();
+
+  currentOffset = compassSensor.currentOffset();
+
+  Serial.println("Line Angle: " + String(lineAngle));
+  Serial.println("Ball Angle: " + String(camera.ballAngle));
+  Serial.println("Home Goal Angle: " + String(homeGoalAngle));
+  Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
+  Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
+  Serial.println("Current offset: " + String(currentOffset));
 
   if (!switches.start())
   {
@@ -151,18 +173,67 @@ void runDefense()
     return;
   }
 
-  movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
-}
+  if (homeGoalAngle == -5)
+  {
+    movement->movement(camera.ballAngle, defenseSpeedFactor, 0, false);
+    return;
+  }
 
-void testBackLeftRobot2() {
-  digitalWrite(pincontrolRLB, HIGH);
-  digitalWrite(pincontrolRLA, LOW);
-  analogWrite(pinspeedRL, 128);
-  delay(2000);
-  digitalWrite(pincontrolRLB, LOW);
-  digitalWrite(pincontrolRLA, HIGH);
-  analogWrite(pinspeedRL, 128);
-  delay(2000);
+  double defenseMoveAngle = defense.defenseCalc(
+      camera.ballAngle,
+      homeGoalAngle,
+      currentOffset,
+      lineAngle,
+      maxChordLength,
+      crossLineState);
+
+  Serial.println("Defense Move angle: " + String(defenseMoveAngle));
+
+  if (defenseMoveAngle < 0)
+  {
+    movement->stop();
+    return;
+  }
+
+  double desiredPerpendicularHeading = 0.0;
+  bool desiredHeadingInBadZone = false;
+  const double badZoneHeadingLimit = 53.0;
+  if (lineAngle != -5)
+  {
+    double relNormalA = Trig::wrapAngle(lineAngle);
+    double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
+    double fieldNormalA = compassSensor.robotRelativeToField(relNormalA);
+    double fieldNormalB = compassSensor.robotRelativeToField(relNormalB);
+    bool normalAInBadZone = fabs(fieldNormalA) > badZoneHeadingLimit;
+    bool normalBInBadZone = fabs(fieldNormalB) > badZoneHeadingLimit;
+
+    if (normalAInBadZone != normalBInBadZone)
+    {
+      desiredPerpendicularHeading = normalAInBadZone ? fieldNormalB : fieldNormalA;
+    }
+    else
+    {
+      double chosenRelativeNormal = (fabs(relNormalA) <= fabs(relNormalB)) ? relNormalA : relNormalB;
+      desiredPerpendicularHeading = compassSensor.robotRelativeToField(chosenRelativeNormal);
+    }
+
+    desiredHeadingInBadZone = fabs(desiredPerpendicularHeading) > badZoneHeadingLimit;
+    Serial.println("Field Relative Desired Heading: " + String(desiredPerpendicularHeading));
+  }
+
+  if (desiredHeadingInBadZone) {
+    Serial.println("YOU ARE APPROACHING A BAD ZONE");
+    if ((desiredPerpendicularHeading >= badZoneHeadingLimit && abs(defenseMoveAngle - 90) <  30) || 
+    (desiredPerpendicularHeading <= badZoneHeadingLimit && abs(defenseMoveAngle - 270) <  30)
+    ) {
+      movement->stop();
+      return;
+    }
+  }
+
+  movement->movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
+
+  Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
 }
 
 void loop()
@@ -174,12 +245,14 @@ void loop()
 
   modeControl->readCommands();
 
-  if (kRobotMode == RobotMode::Offense)
-  {
-    offenseStateMachine->run(kConfiguredOffenseState);
-  } else {
-    runDefense();
-  }
+  // if (kRobotMode == RobotMode::Offense)
+  // {
+  //   offenseStateMachine->run(kConfiguredOffenseState);
+  // } else {
+  //   runDefense();
+  // }
+
+  runDefense();
 
   sendHeadingTelemetryToPi();
   linePCBComm.setRobotHeadingDegrees(compassSensor.currentOffset());
@@ -192,5 +265,5 @@ void loop()
     lcdAvoidanceAngle = offenseStateMachine->avoidanceAngle();
   }
   modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle);
-  // delay(1000);
+  delay(1000);
 }

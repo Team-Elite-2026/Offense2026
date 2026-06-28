@@ -43,7 +43,7 @@ public:
     void runAll();
     double computeSpeedFactor(Point currentPose, Point desiredPose);
 
-    Point currentPose;
+    Point currentPose = {-5, -5, 0};
 
 
     double kp = 0.8;

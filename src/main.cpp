@@ -9,7 +9,7 @@
 #include <Movement.h>
 #include <OffenseStateMachine.h>
 #include <RobotConfig.h>
-#include <Switches.h>
+#include <VirtualBoundary.h>
 #include <orbit.h>
 #include <Defense.h>
 
@@ -22,7 +22,6 @@ constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
 RobotMode kRobotMode = defaultRobotMode;
 
 CompassSensor compassSensor;
-Switch switches;
 Calibration calibration(compassSensor);
 Motor* FL = nullptr;
 Motor* FR = nullptr;
@@ -36,6 +35,13 @@ Cam camera;
 LinePCBComm linePCBComm(Serial2);
 ModeControl* modeControl = nullptr;
 OffenseStateMachine* offenseStateMachine = nullptr;
+VirtualBoundaryBounds virtualBoundaryBounds = {
+  virtualBoundaryMinX,
+  virtualBoundaryMaxX,
+  virtualBoundaryMinY,
+  virtualBoundaryMaxY
+};
+VirtualBoundary virtualBoundary(virtualBoundaryBounds);
 unsigned long lastPiHeadingTelemetryMs = 0;
 double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
 static void initializeDriveMotors()
@@ -110,6 +116,7 @@ void setup()
   movement = new Movement(*FL, *FR, *BL, *BR, *dribbler, compassSensor);
   camera.setMovement(movement);
   modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement, kRobotMode);
+  camera.setModeControl(modeControl);
   modeControl->begin(115200);
   modeControl->sendBootMarker();
 
@@ -154,18 +161,40 @@ void runDefense()
 
   currentOffset = compassSensor.currentOffset();
 
-  Serial.println("Line Angle: " + String(lineAngle));
-  Serial.println("Ball Angle: " + String(camera.ballAngle));
-  Serial.println("Home Goal Angle: " + String(homeGoalAngle));
-  Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
-  Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
-  Serial.println("Current offset: " + String(currentOffset));
-  Serial.println("Ball Angle: " + String(camera.ballAngle));
+  // Serial.println("Line Angle: " + String(lineAngle));
+  // Serial.println("Ball Angle: " + String(camera.ballAngle));
+  // Serial.println("Home Goal Angle: " + String(homeGoalAngle));
+  // Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
+  // Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
+  // Serial.println("Current offset: " + String(currentOffset));
+  // Serial.println("Ball Angle: " + String(camera.ballAngle));
 
   if (!modeControl->isStartEnabled())
   {
     movement->stop();
     return;
+  }
+
+  double virtualBoundaryAngle = -1.0;
+  bool hasPose = movement->currentPose.x != -5 && movement->currentPose.y != -5;
+  bool outsideVirtualBoundary = hasPose &&
+      virtualBoundary.getAvoidanceAngle(movement->currentPose, currentOffset, virtualBoundaryAngle);
+      
+  if (outsideVirtualBoundary)
+  {
+    if (virtualBoundaryDebugEnabled)
+    {
+      Serial.println("Virtual Boundary Active");
+      Serial.println("Virtual Boundary Pose X: " + String(movement->currentPose.x));
+      Serial.println("Virtual Boundary Pose Y: " + String(movement->currentPose.y));
+      Serial.println("Virtual Boundary Move Angle: " + String(virtualBoundaryAngle));
+    }
+
+    if (virtualBoundaryDriveEnabled)
+    {
+      movement->movement(virtualBoundaryAngle, virtualBoundaryAvoidanceSpeed, currentOffset, false);
+      return;
+    }
   }
 
   if (camera.ballAngle == -5)
@@ -188,7 +217,7 @@ void runDefense()
       maxChordLength,
       crossLineState);
 
-  Serial.println("Defense Move angle: " + String(defenseMoveAngle));
+  // Serial.println("Defense Move angle: " + String(defenseMoveAngle));
 
   if (defenseMoveAngle < 0)
   {
@@ -234,10 +263,10 @@ void runDefense()
     }
   }
 
-  Serial.println("Moving to Defense Position");
-  Serial.println("Defense Move Angle: " + String(defenseMoveAngle));
-  Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
-  Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
+  // Serial.println("Moving to Defense Position");
+  // Serial.println("Defense Move Angle: " + String(defenseMoveAngle));
+  // Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
+  // Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
 
 
 

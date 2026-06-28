@@ -6,10 +6,10 @@
 #include <Adafruit_I2CDevice.h>
 #include <iostream>
 #include <trig.h>
-#include <switches.h>
 #include <map>
 
 class Movement;
+class ModeControl;
 
 class Cam
 {
@@ -23,12 +23,14 @@ public:
         int sampleTime;
         double CamCalc();
         void setMovement(Movement* movement);
+        void setModeControl(ModeControl* modeControl);
         std::string buffer;
         bool inIntake;
 
 private:
         char read;
         Movement* movement;
+        ModeControl* modeControl;
         double poseX;
         double poseY;
         double previousBallAngle;
@@ -36,6 +38,5 @@ private:
         double previousYellowAngle;
         double previousBallDistance;
         elapsedMillis derivativeSample;
-        Switch switches;
 };
 #endif

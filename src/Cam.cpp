@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <ModeControl.h>
 #include <Movement.h>
 using namespace std;
 Cam::Cam()
@@ -16,6 +17,7 @@ Cam::Cam()
   sampleTime = 0;
   buffer = "";
   movement = NULL;
+  modeControl = NULL;
   poseX = -5;
   poseY = -5;
 }
@@ -23,6 +25,11 @@ Cam::Cam()
 void Cam::setMovement(Movement* movement)
 {
   this->movement = movement;
+}
+
+void Cam::setModeControl(ModeControl* modeControl)
+{
+  this->modeControl = modeControl;
 }
 
 double Cam::CamCalc()
@@ -43,7 +50,7 @@ double Cam::CamCalc()
       }
       else if (read == 'a') {
         ballDist = strtod(buffer.c_str(), NULL);
-        if (switches.lightgate())
+        if (modeControl != NULL && modeControl->doWeHaveBall())
           ballDist = 12;
         buffer = "";
         // Serial.print("ball dist: ");
@@ -90,8 +97,8 @@ double Cam::CamCalc()
         // Serial.println(poseY);
         if (movement != NULL && poseX != -5 && poseY != -5)
         {
-          movement->currentPose.x = poseX;
-          movement->currentPose.y = poseY;
+          movement->currentPose.x = poseX * 10;
+          movement->currentPose.y = poseY * 10;
           // Serial.print("currentPose x: ");
           // Serial.println(movement->currentPose.x);
           // Serial.print("currentPose y: ");

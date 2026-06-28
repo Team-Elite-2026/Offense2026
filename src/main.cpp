@@ -387,6 +387,7 @@ void loop()
     lcdLineAngle = offenseStateMachine->lineAngle();
     lcdAvoidanceAngle = offenseStateMachine->avoidanceAngle();
   }
-  modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle);
+  modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle,
+                             movement->currentPose.x, movement->currentPose.y);
   // delay(1000);
 }

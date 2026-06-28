@@ -117,7 +117,7 @@ float ModeControl::readBatteryVoltage()
   return _batteryVoltage;
 }
 
-void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
+void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle, double poseX, double poseY)
 {
   unsigned long now = millis();
   if (now - state.lastTelemetryMs < kTelemetryIntervalMs)
@@ -135,6 +135,8 @@ void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle)
   printLine("Orientation angle: " + String(_compassSensor.getOrientation()));
   printLine("Line Angle: " + String(lineAngle));
   printLine("Avoidance angle: " + String(avoidanceAngle));
+  printLine("Pose X: " + String(poseX, 0));
+  printLine("Pose Y: " + String(poseY, 0));
   if (state.lineDebugEnabled)
   {
     sendLineArray();

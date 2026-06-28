@@ -55,6 +55,38 @@ double Defense::clamp01(double value)
     return value;
 }
 
+double Defense::clampDefenseMoveAngle(double movementAngle)
+{
+    double angle = normalize360(movementAngle);
+    double rightMin = kRightSlideAngle - kSlideAngleHalfWidth;
+    double rightMax = kRightSlideAngle + kSlideAngleHalfWidth;
+    double leftMin = kLeftSlideAngle - kSlideAngleHalfWidth;
+    double leftMax = kLeftSlideAngle + kSlideAngleHalfWidth;
+
+    if (angularDistance(angle, kRightSlideAngle) <= angularDistance(angle, kLeftSlideAngle))
+    {
+        if (angle < rightMin)
+        {
+            return rightMin;
+        }
+        if (angle > rightMax)
+        {
+            return rightMax;
+        }
+        return angle;
+    }
+
+    if (angle < leftMin)
+    {
+        return leftMin;
+    }
+    if (angle > leftMax)
+    {
+        return leftMax;
+    }
+    return angle;
+}
+
 double Defense::blendTangentWithNormal(double tangentAngle,
                                        double lineNormalAngle,
                                        double chordLengthNormalized,
@@ -103,7 +135,7 @@ double Defense::defenseCalc(double ballAngle,
     {
         if (angleDiff > 170.0 && hardStop <= 100 && defenseAngle >= 0)
         {
-            defenseAngle = normalize360(defenseAngle + 180.0);
+            defenseAngle = clampDefenseMoveAngle(defenseAngle + 180.0);
         }
         else
         {
@@ -123,6 +155,7 @@ double Defense::defenseCalc(double ballAngle,
     if (lineNormalAngle < 0.0)
     {
         lastTangentAngle = -1;
+        defenseAngle = clampDefenseMoveAngle(defenseAngle);
         Serial.print("defense Angle (no line): ");
         Serial.println(defenseAngle);
         return defenseAngle;
@@ -145,6 +178,7 @@ double Defense::defenseCalc(double ballAngle,
     // }
 
     defenseAngle = blendTangentWithNormal(tangentAngle, lineNormalAngle, chordLengthNormalized, crossLine);
+    defenseAngle = clampDefenseMoveAngle(defenseAngle);
 
     Serial.print("defense Angle: ");
     Serial.println(defenseAngle);

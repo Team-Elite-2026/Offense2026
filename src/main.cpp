@@ -130,9 +130,9 @@ void setup()
 
 int getHomeGoalAngle() {
   if (modeControl->isGoalBlueSelected()) {
-    return camera.blueGoal;
+    return camera.yellowGoal;
   } 
-  return camera.yellowGoal;
+  return camera.blueGoal;
 }
 
 void runDefense()
@@ -161,7 +161,8 @@ void runDefense()
   Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
   Serial.println("Current offset: " + String(currentOffset));
   Serial.println("Ball Angle: " + String(camera.ballAngle));
-  if (!switches.start())
+
+  if (!modeControl->isStartEnabled())
   {
     movement->stop();
     return;
@@ -189,11 +190,11 @@ void runDefense()
 
   Serial.println("Defense Move angle: " + String(defenseMoveAngle));
 
-  // if (defenseMoveAngle < 0)
-  // {
-  //   movement->stop();
-  //   return;
-  // }
+  if (defenseMoveAngle < 0)
+  {
+    movement->stop();
+    return;
+  }
 
   double desiredPerpendicularHeading = 0.0;
   bool desiredHeadingInBadZone = false;
@@ -237,6 +238,9 @@ void runDefense()
   Serial.println("Defense Move Angle: " + String(defenseMoveAngle));
   Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
   Serial.println("Desired Heading: " + String(desiredPerpendicularHeading));
+
+
+
   movement->movement(defenseMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
@@ -269,5 +273,5 @@ void loop()
     lcdAvoidanceAngle = offenseStateMachine->avoidanceAngle();
   }
   modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle);
-  delay(1000);
+  // delay(1000);
 }

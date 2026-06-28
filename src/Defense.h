@@ -5,6 +5,10 @@
 
 class Defense {
 public:
+    static constexpr double kRightSlideAngle = 90.0;
+    static constexpr double kLeftSlideAngle = 270.0;
+    static constexpr double kSlideAngleHalfWidth = 10.0;
+
     Defense();
     double defenseCalc(double ballAngle,
                        double homeGoalAngle,
@@ -24,6 +28,7 @@ private:
     static double angularDistance(double a, double b);
     static double projectAngle(double lineNormalAngle, double movementAngle);
     static double clamp01(double value);
+    static double clampDefenseMoveAngle(double movementAngle);
     static double blendTangentWithNormal(double tangentAngle,
                                          double lineNormalAngle,
                                          double chordLengthNormalized,

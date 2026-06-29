@@ -153,7 +153,7 @@ double getHomeGoalAngle() {
 void runDefense()
 {
 
-     if (modeControl->state.lineCalibrationActive)
+  if (modeControl->state.lineCalibrationActive)
   {
     movement->stop();
     calibration.calibrateCompassSensor();

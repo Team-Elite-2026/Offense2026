@@ -3,13 +3,11 @@
 #include <stdlib.h>
 
 ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
-                         CompassSensor& compassSensor, Movement& movement,
-                         RobotMode& robotMode)
+                         CompassSensor& compassSensor, Movement& movement)
   : _serial(serial),
     _linePCBComm(linePCBComm),
     _compassSensor(compassSensor),
     _movement(movement),
-    _robotMode(robotMode),
     _commandLength(0),
     _batteryVoltage(0.0f),
     _nextDebugKickMs(kDebugKickCooldownMs)

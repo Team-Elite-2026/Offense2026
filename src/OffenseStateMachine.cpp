@@ -110,7 +110,6 @@ void OffenseStateMachine::run(OffenseState configuredState)
 
 void OffenseStateMachine::updateVisionAndLineState()
 {
-  _linePCBComm.setRobotHeadingDegrees(_compassSensor.currentOffset());
   _linePCBComm.update();
   _camera.CamCalc();
 

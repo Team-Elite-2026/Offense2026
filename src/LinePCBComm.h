@@ -50,8 +50,7 @@ public:
 
     // Feed the current robot heading so line recovery can stay stable even if
     // the robot is rotated while sitting on or beyond the boundary.
-    void setRobotHeadingDegrees(float headingDegrees);
-
+    
     // Send a debug-enable command to the LinePCB.
     // LinePCB will include a LinePCBDebugPkt each loop while enabled.
     void setDebugEnabled(bool enabled);

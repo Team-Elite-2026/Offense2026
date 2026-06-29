@@ -152,6 +152,15 @@ double getHomeGoalAngle() {
 
 void runDefense()
 {
+
+     if (modeControl->state.lineCalibrationActive)
+  {
+    movement->stop();
+    calibration.calibrateCompassSensor();
+    Serial.println("Calibrating");
+    return;
+  }
+  
   offenseStateMachine->updateVisionAndLineState();
 
   lineAngle = linePCBComm.getLineAngle();

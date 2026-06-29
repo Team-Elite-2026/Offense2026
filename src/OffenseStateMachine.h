@@ -65,8 +65,6 @@ public:
 
   void run(OffenseState configuredState);
 
-  double lineAngle() const { return _lineAngle; }
-  double avoidanceAngle() const { return _avoidanceAngle; }
   void updateVisionAndLineState();
 
 

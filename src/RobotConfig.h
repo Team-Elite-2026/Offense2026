@@ -20,7 +20,6 @@ constexpr double pincontrolRRB = 10;
 constexpr double pinspeedRR    = 5;
 constexpr double selectionPin  = 26;
 
-constexpr RobotMode defaultRobotMode = RobotMode::Defense;
 constexpr double defenseSpeedFactor  = 0.24;
 constexpr double offenseSpeedFactor  = 0.28;
 constexpr double lineAvoidanceSpeed  = 0.15;

@@ -21,8 +21,6 @@ constexpr OffenseState kConfiguredOffenseState = OffenseState::Orbit;
 
 constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
 
-RobotMode kRobotMode = defaultRobotMode;
-
 CompassSensor compassSensor;
 Calibration calibration(compassSensor);
 Motor* FL = nullptr;
@@ -125,7 +123,7 @@ void setup()
   initializeDriveMotors();
   movement = new Movement(*FL, *FR, *BL, *BR, *dribbler, compassSensor);
   camera.setMovement(movement);
-  modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement, kRobotMode);
+  modeControl = new ModeControl(Serial8, linePCBComm, compassSensor, *movement);
   camera.setModeControl(modeControl);
   modeControl->begin(115200);
   modeControl->sendBootMarker();
@@ -372,25 +370,18 @@ void loop()
 
   modeControl->readCommands();
 
-  // if (kRobotMode == RobotMode::Offense)
-  // {
-  //   offenseStateMachine->run(kConfiguredOffenseState);
-  // } else {
-  //   runDefense();
-  // }
-
-  runDefense();
+  if (modeControl->isOffenseMode())
+  {
+    offenseStateMachine->run(kConfiguredOffenseState);
+  } else {
+    runDefense();
+  }
 
   sendHeadingTelemetryToPi();
-  linePCBComm.setRobotHeadingDegrees(compassSensor.currentOffset());
   linePCBComm.update();
   double lcdLineAngle = linePCBComm.getLineAngle();
   double lcdAvoidanceAngle = linePCBComm.getAvoidanceAngle();
-  if (kRobotMode == RobotMode::Offense)
-  {
-    lcdLineAngle = offenseStateMachine->lineAngle();
-    lcdAvoidanceAngle = offenseStateMachine->avoidanceAngle();
-  }
+
   modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle,
                              movement->currentPose.x, movement->currentPose.y);
   // delay(1000);

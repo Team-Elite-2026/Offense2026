@@ -56,6 +56,10 @@ bool ModeControl::isGoalBlueSelected() const
   return state.goalIsBlue;
 }
 
+bool ModeControl::isOffenseMode() const {
+  return _robotMode == RobotMode::Offense;
+}
+
 bool ModeControl::doWeHaveBall() const 
 {
   bool lightGateBlocked = digitalRead(kLightGatePin) == LOW;

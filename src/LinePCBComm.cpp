@@ -42,15 +42,6 @@ uint8_t LinePCBComm::frameChecksum(uint8_t type, uint16_t len,
     return cs;
 }
 
-void LinePCBComm::setRobotHeadingDegrees(float headingDegrees) {
-    _robotHeadingDegrees = normalize360(headingDegrees);
-    if (!_hasHeadingReference) {
-        _previousRobotHeadingDegrees = _robotHeadingDegrees;
-    }
-    _hasHeadingReference = true;
-    recomputeResolvedState();
-}
-
 void LinePCBComm::update() {
     while (_serial.available() > 0) {
         uint8_t b = (uint8_t)_serial.read();

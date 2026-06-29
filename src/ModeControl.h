@@ -31,26 +31,26 @@ struct ModeControlState
   StartPosition startPosition;
   unsigned long lastTelemetryMs;
   unsigned long lastCalibrationStatusMs;
+  RobotMode robotMode;
 };
 
 class ModeControl
 {
 public:
   ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
-              CompassSensor& compassSensor, Movement& movement,
-              RobotMode& robotMode);
+              CompassSensor& compassSensor, Movement& movement);
 
   void begin(uint32_t baud);
   void readCommands();
   void sendTelemetry(double lineAngle, double avoidanceAngle, double poseX, double poseY);
   void sendCalibrationStatus();
   void sendBootMarker();
-  void applyRobotModeSettings();
   Print* statusOutput();
 
   bool isStartEnabled() const;
   bool doWeHaveBall() const;
   bool isGoalBlueSelected() const;
+  bool isOffenseMode() const;
   uint8_t telemetryModeOverride() const;
 
   ModeControlState state;

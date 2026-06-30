@@ -13,7 +13,7 @@ ModeControl::ModeControl(HardwareSerial& serial, LinePCBComm& linePCBComm,
     _nextDebugKickMs(kDebugKickCooldownMs)
 {
   state = {true, false, false, false, false, false,
-           StartMode::None, StartPosition::None, 0, 0};
+           StartMode::None, StartPosition::None, 0, 0, defaultRobotMode};
 }
 
 void ModeControl::begin(uint32_t baud)
@@ -55,7 +55,7 @@ bool ModeControl::isGoalBlueSelected() const
 }
 
 bool ModeControl::isOffenseMode() const {
-  return _robotMode == RobotMode::Offense;
+  return state.robotMode == RobotMode::Offense;
 }
 
 bool ModeControl::doWeHaveBall() const 
@@ -72,7 +72,7 @@ uint8_t ModeControl::telemetryModeOverride() const
   {
     return 0u;
   }
-  return (_robotMode == RobotMode::Offense) ? 1u : 2u;
+  return (state.robotMode == RobotMode::Offense) ? 1u : 2u;
 }
 
 void ModeControl::printLine(const String& line)
@@ -129,7 +129,7 @@ void ModeControl::sendTelemetry(double lineAngle, double avoidanceAngle, double 
   state.lastTelemetryMs = now;
 
   printLine(isGoalBlueSelected() ? "blue goal" : "yellow goal");
-  printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(_robotMode) : "AUTO"));
+  printLine(String("Mode: ") + (state.robotModeOverrideActive ? robotModeToken(state.robotMode) : "AUTO"));
   bool lightGateBlocked = digitalRead(kLightGatePin) == LOW;
   printLine(String("Light Gate: ") + (lightGateBlocked ? "BLOCKED" : "CLEAR"));
   printLine(String("Battery: ") + String(readBatteryVoltage(), 1));
@@ -266,14 +266,14 @@ void ModeControl::handleCommand(const char* command)
   if (strcmp(command, "MODE:OFFENSE") == 0)
   {
     state.robotModeOverrideActive = true;
-    _robotMode = RobotMode::Offense;
+    state.robotMode = RobotMode::Offense;
     return;
   }
 
   if (strcmp(command, "MODE:DEFENSE") == 0)
   {
     state.robotModeOverrideActive = true;
-    _robotMode = RobotMode::Defense;
+    state.robotMode = RobotMode::Defense;
     return;
   }
 

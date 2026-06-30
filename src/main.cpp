@@ -393,5 +393,8 @@ void loop()
 
   modeControl->sendTelemetry(lcdLineAngle, lcdAvoidanceAngle,
                              movement->currentPose.x, movement->currentPose.y);
-  // delay(1000);
+  if (robotDebugNoMoveMode)
+  {
+    delay(robotDebugLoopDelayMs);
+  }
 }

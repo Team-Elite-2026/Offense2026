@@ -65,7 +65,7 @@ double Cam::CamCalc()
   if (Serial3.available() > 0)
   {
     
-    for (int i = 0; i < Serial3.available(); i++)
+    while (Serial3.available() > 0)
     {
       read = Serial3.read();
       // Serial.println(read);
@@ -135,10 +135,10 @@ double Cam::CamCalc()
         {
           movement->currentPose.x = poseX * 10;
           movement->currentPose.y = poseY * 10;
-          // Serial.print("currentPose x: ");
-          // Serial.println(movement->currentPose.x);
-          // Serial.print("currentPose y: ");
-          // Serial.println(movement->currentPose.y);
+          Serial.print("currentPose x: ");
+          Serial.println(movement->currentPose.x);
+          Serial.print("currentPose y: ");
+          Serial.println(movement->currentPose.y);
         }
         buffer = "";
       }

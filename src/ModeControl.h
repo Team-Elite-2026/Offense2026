@@ -77,7 +77,6 @@ private:
   LinePCBComm&    _linePCBComm;
   CompassSensor&  _compassSensor;
   Movement&       _movement;
-  RobotMode&      _robotMode;
 
   char   _commandBuffer[kCommandBufferSize];
   size_t _commandLength;

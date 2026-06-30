@@ -3,6 +3,10 @@
 
 enum class RobotMode { Offense, Defense };
 
+constexpr bool robotDebugNoMoveMode = false;
+constexpr unsigned long robotDebugLoopDelayMs = 1000;
+constexpr RobotMode defaultRobotMode = RobotMode::Defense;
+
 constexpr double pincontrolFLA = 22;
 constexpr double pincontrolFLB = 23;
 constexpr double pinspeedFL    = 2;
@@ -26,7 +30,7 @@ constexpr double lineAvoidanceSpeed  = 0.15;
 
 // Virtual rectangle boundary in the same field coordinate frame as
 // Movement::currentPose (millimeters). This acts like an imaginary white line.
-constexpr bool virtualBoundaryDebugEnabled = true;
+constexpr bool virtualBoundaryDebugEnabled = false;
 constexpr bool virtualBoundaryDriveEnabled = false;
 constexpr double virtualBoundaryMinX = -500.0;
 constexpr double virtualBoundaryMaxX = 500.0;
@@ -34,7 +38,7 @@ constexpr double virtualBoundaryMinY = -1000.0;
 constexpr double virtualBoundaryMaxY = -820.0;
 constexpr double virtualBoundaryAvoidanceSpeed = 0.15;
 
-constexpr bool goalieCurveDebugEnabled = true;
+constexpr bool goalieCurveDebugEnabled = false;
 constexpr bool goalieCurveDriveEnabled = false;
 constexpr double goalieCurveMinOffsetMm = 60.0;
 constexpr double goalieCurveMaxOffsetMm = 120.0;

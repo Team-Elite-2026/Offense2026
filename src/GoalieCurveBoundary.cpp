@@ -172,12 +172,12 @@ double GoalieCurveBoundary::blendWithDefenseAngle(
 void GoalieCurveBoundary::printDebug(const GoalieCurveBoundaryResult& result,
                                      double blendedRobotAngle) const
 {
-    Serial.println("Goalie Curve State: " + String(stateName(result.state)));
-    Serial.println("Goalie Curve Closest Point: " + String(result.closestX) + ", " + String(result.closestY));
+    // Serial.println("Goalie Curve State: " + String(stateName(result.state)));
+    // Serial.println("Goalie Curve Closest Point: " + String(result.closestX) + ", " + String(result.closestY));
     Serial.println("Goalie Curve Normal: " + String(result.normalX) + ", " + String(result.normalY));
     Serial.println("Goalie Curve Signed Distance: " + String(result.signedDistanceMm));
     Serial.println("Goalie Curve Correction Strength: " + String(result.correctionStrength));
-    Serial.println("Goalie Curve Correction Field Angle: " + String(result.correctionFieldAngle));
-    Serial.println("Goalie Curve Correction Robot Angle: " + String(result.correctionRobotAngle));
+    // Serial.println("Goalie Curve Correction Field Angle: " + String(result.correctionFieldAngle));
+    // Serial.println("Goalie Curve Correction Robot Angle: " + String(result.correctionRobotAngle));
     Serial.println("Goalie Curve Blended Robot Angle: " + String(blendedRobotAngle));
 }

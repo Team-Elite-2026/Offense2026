@@ -1,5 +1,6 @@
 #include <Movement.h>
 #include <math.h>
+#include <RobotConfig.h>
 #include <trig.h>
 
 namespace {
@@ -135,6 +136,11 @@ void Movement::movement(double intended_movement_angle, double speedfactor, doub
     powerRR = -1;
   }
 
+  if (robotDebugNoMoveMode) {
+    Serial.println("DEBUG NO MOVE: drive motor command suppressed");
+    this->stop();
+    return;
+  }
 
   this->FLMotor.setSpeed(speedfactor * powerFL);
   this->FRMotor.setSpeed(speedfactor * powerFR);

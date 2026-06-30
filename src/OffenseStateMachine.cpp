@@ -124,7 +124,9 @@ void OffenseStateMachine::updateVisionAndLineState()
     _camera.ballAngle,
     _camera.ballDist,
     _camera.derivative,
-    _camera.sampleTime);
+    _camera.sampleTime,
+    _goalAngle,
+    _aimingGoal);
 }
 
 void OffenseStateMachine::runLineAvoidance()

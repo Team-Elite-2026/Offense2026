@@ -5,7 +5,7 @@ enum class RobotMode { Offense, Defense };
 
 constexpr bool robotDebugNoMoveMode = false;
 constexpr unsigned long robotDebugLoopDelayMs = 1000;
-constexpr RobotMode defaultRobotMode = RobotMode::Defense;
+constexpr RobotMode defaultRobotMode = RobotMode::Offense;
 
 constexpr double pincontrolFLA = 22;
 constexpr double pincontrolFLB = 23;

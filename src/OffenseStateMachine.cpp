@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <math.h>
 
+#include <GameState.h>
 #include <OffenseStateMachine.h>
 #include <RobotConfig.h>
 #include <trig.h>
@@ -90,18 +91,11 @@ OffenseStateMachine::OffenseStateMachine(
 {
 }
 
-void OffenseStateMachine::run(OffenseState configuredState)
+void OffenseStateMachine::run(GameState& gameState, OffenseState configuredState)
 {
-  if (_modeControl.state.lineCalibrationActive)
-  {
-    _movement.stop();
-    _calibration.calibrateCompassSensor();
-    Serial.println("Calibrating");
-    return;
-  }
-
-  updateVisionAndLineState();
-  _movement.kickBackground();
+  // The main loop handles line calibration, kickBackground(), and gameState.update()
+  // before dispatching here, so they are not repeated.
+  syncFromGameState(gameState);
   printDebugState();
 
   if (!_modeControl.isStartEnabled())
@@ -129,31 +123,30 @@ void OffenseStateMachine::run(OffenseState configuredState)
   }
 }
 
-void OffenseStateMachine::updateVisionAndLineState()
+void OffenseStateMachine::syncFromGameState(GameState& gameState)
 {
-  _camera.CamCalc();
+  _gs = &gameState;
 
-  _movement.currentPose.heading = _compassSensor.currentOffset();
-  _lineAngle = _linePCBComm.getLineAngle();
-  _goalAngle = _modeControl.state.goalIsBlue ? _camera.blueGoal : _camera.yellowGoal;
-  _aimingGoal = _goalAngle != -5;
+  _lineAngle = gameState.lineAngle;
+  _goalAngle = gameState.attackGoalAngle();
+  _aimingGoal = gameState.hasAttackGoal();
   if (!_aimingGoal)
   {
     _goalAngle = 0;
   }
 
   _orbitAngle = _orbit.CalculateRobotAngle(
-    _camera.ballAngle,
-    _camera.ballDist,
-    _camera.derivative,
-    _camera.sampleTime,
+    gameState.ballAngle,
+    gameState.ballDistance,
+    gameState.ballDerivative,
+    gameState.ballSampleTime,
     _goalAngle,
     _aimingGoal);
 }
 
 void OffenseStateMachine::runLineAvoidance()
 {
-  _avoidanceAngle = _linePCBComm.getAvoidanceAngle();
+  _avoidanceAngle = _gs->avoidanceAngle;
   // Serial.println("Avoidance angle: " + String(_avoidanceAngle));
   _movement.movement(_avoidanceAngle, lineAvoidanceSpeed, 0, false);
 }
@@ -168,7 +161,7 @@ void OffenseStateMachine::runOrbitState()
   }
 
   // ballDist is in cm; -5 means the ball is not currently seen.
-  bool ballClose = (_camera.ballDist != -5) && (_camera.ballDist < kBallCloseCm);
+  bool ballClose = (_gs->ballDistance != -5) && (_gs->ballDistance < kBallCloseCm);
 
   // Run the dribbler to draw the ball in once we are close.
   _movement.setDribbler(ballClose ? pwmToFactor(kDribblerApproachPwm) : 0.0);
@@ -182,7 +175,7 @@ void OffenseStateMachine::runOrbitState()
     return;
   }
 
-  if (_camera.ballAngle != -5)
+  if (_gs->ballAngle != -5)
   {
     double approachSpeed = orbitApproachSpeed(_orbit.distanceToTarget);
     _movement.movement(_orbitAngle, approachSpeed, _goalAngle, _aimingGoal);
@@ -310,8 +303,8 @@ void OffenseStateMachine::printDebugState() const
   Serial.println("State: " + String(stateName(_activeState)));
   Serial.println("Line Angle: " + String(_lineAngle));
   Serial.println("Robot Angle: " + String(_orbitAngle));
-  Serial.println("Ball Angle: " + String(_camera.ballAngle));
+  Serial.println("Ball Angle: " + String(_gs->ballAngle));
   Serial.println("Goal Angle: " + String(_goalAngle));
-  Serial.println("Ball dist:" + String(_camera.ballDist));
+  Serial.println("Ball dist:" + String(_gs->ballDistance));
   Serial.println("Robot Heading: " + String(_compassSensor.currentOffset()));
 }

@@ -5,18 +5,6 @@
 
 Defense::Defense() : defenseAngle(-1), lastTangentAngle(-1) {}
 
-double Defense::projectAngle(double lineNormalAngle, double movementAngle)
-{
-    double tangentPlus = Trig::normalize360(lineNormalAngle + 90.0);
-    double tangentMinus = Trig::normalize360(lineNormalAngle - 90.0);
-
-    if (Trig::angularDistance(movementAngle, tangentPlus) <= Trig::angularDistance(movementAngle, tangentMinus))
-    {
-        return tangentPlus;
-    }
-    return tangentMinus;
-}
-
 double Defense::clampDefenseMoveAngle(double movementAngle)
 {
     double angle = Trig::normalize360(movementAngle);
@@ -63,15 +51,9 @@ double Defense::blendTangentWithNormal(double tangentAngle,
     // Opposite of avoidanceAngle(): if crossLine is true, normal correction points
     // to lineNormal+180; otherwise it points to lineNormal.
     double lineCorrectionAngle = crossLine ? Trig::normalize360(lineNormalAngle + 180.0) : Trig::normalize360(lineNormalAngle);
-    double blendedX = Trig::Sin(tangentAngle) + (normalGain * Trig::Sin(lineCorrectionAngle));
-    double blendedY = Trig::Cos(tangentAngle) + (normalGain * Trig::Cos(lineCorrectionAngle));
 
-    if ((blendedX * blendedX + blendedY * blendedY) < 1e-6)
-    {
-        return Trig::normalize360(tangentAngle);
-    }
-
-    return Trig::normalize360(Trig::toDegrees(atan2(blendedX, blendedY)));
+    // Blend the tangent with the normal correction, weighted by normalGain.
+    return Trig::blendAngles(tangentAngle, lineCorrectionAngle, normalGain);
 }
 
 double Defense::defenseCalc(double ballAngle,
@@ -110,9 +92,7 @@ double Defense::defenseCalc(double ballAngle,
 
     hardStop = 0;
 
-    double robotAngleX = Trig::Sin(ball) + Trig::Sin(goal);
-    double robotAngleY = Trig::Cos(ball) + Trig::Cos(goal);
-    defenseAngle = Trig::normalize360(Trig::toDegrees(atan2(robotAngleX, robotAngleY)));
+    defenseAngle = Trig::bisectAngles(ball, goal);
 
     if (lineNormalAngle < 0.0)
     {
@@ -123,7 +103,7 @@ double Defense::defenseCalc(double ballAngle,
         return defenseAngle;
     }
 
-    double tangentAngle = projectAngle(lineNormalAngle, defenseAngle);
+    double tangentAngle = Trig::projectTangent(lineNormalAngle, defenseAngle);
     // bool sidewaysHeading = fabs(fabs(normalize180(headingCorrection)) - 70.0) <= sidewaysHeadingTolerance;
 
     // if (sidewaysHeading)

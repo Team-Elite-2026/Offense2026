@@ -24,6 +24,15 @@ public:
     static double wrapAngle(double angle);
     static double min(double a, double b);
     static double getAngle(Point p1, Point p2); // Returns the angle between the vertical of p1 and p2
+
+    // Returns the tangent (lineNormalAngle +/- 90) that is angularly closest to
+    // referenceAngle. Used to slide along a line rather than across it.
+    static double projectTangent(double lineNormalAngle, double referenceAngle);
+    // Unit-vector average of two angles (the bisector direction). Degrees.
+    static double bisectAngles(double a, double b);
+    // Weighted unit-vector blend: direction of unit(a) + weightB * unit(b). Falls
+    // back to a when the blended vector is degenerate (near zero length). Degrees.
+    static double blendAngles(double a, double b, double weightB);
 };
 
 #endif

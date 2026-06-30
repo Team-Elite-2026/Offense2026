@@ -11,6 +11,8 @@
 #include <Movement.h>
 #include <orbit.h>
 
+class GameState;
+
 enum class OffenseState
 {
   Orbit,
@@ -63,12 +65,8 @@ public:
     Movement& movement,
     ModeControl& modeControl);
 
-  void run(OffenseState configuredState);
-
-  // Reads camera data and snapshots the latest LinePCBComm values. The main
-  // loop owns LinePCBComm::update() so movement and telemetry stay in sync.
-  void updateVisionAndLineState();
-
+  // Per-loop world state is read from gameState; the main loop owns gameState.update().
+  void run(GameState& gameState, OffenseState configuredState);
 
 private:
   CompassSensor& _compassSensor;
@@ -78,6 +76,7 @@ private:
   Orbit& _orbit;
   Movement& _movement;
   ModeControl& _modeControl;
+  GameState* _gs = nullptr;
 
   double _lineAngle = -5;
   double _orbitAngle = -5;
@@ -94,6 +93,7 @@ private:
   // Times how long DribblerToKick has held the dribbler at full speed.
   elapsedMillis _dribblerToKickTimer;
 
+  void syncFromGameState(GameState& gameState);
   void runLineAvoidance();
   void runOrbitState();
 

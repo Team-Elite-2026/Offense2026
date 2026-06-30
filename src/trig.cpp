@@ -111,3 +111,30 @@ double Trig::getAngle(Point p1, Point p2) {
 
     return angle;
 }
+
+double Trig::projectTangent(double lineNormalAngle, double referenceAngle) {
+    double tangentPlus = normalize360(lineNormalAngle + 90.0);
+    double tangentMinus = normalize360(lineNormalAngle - 90.0);
+
+    if (angularDistance(referenceAngle, tangentPlus) <= angularDistance(referenceAngle, tangentMinus)) {
+        return tangentPlus;
+    }
+    return tangentMinus;
+}
+
+double Trig::bisectAngles(double a, double b) {
+    double x = Sin(a) + Sin(b);
+    double y = Cos(a) + Cos(b);
+    return normalize360(toDegrees(atan2(x, y)));
+}
+
+double Trig::blendAngles(double a, double b, double weightB) {
+    double x = Sin(a) + (weightB * Sin(b));
+    double y = Cos(a) + (weightB * Cos(b));
+
+    if ((x * x + y * y) < 1e-6) {
+        return normalize360(a);
+    }
+
+    return normalize360(toDegrees(atan2(x, y)));
+}

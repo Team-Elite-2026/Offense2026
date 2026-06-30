@@ -51,4 +51,11 @@ constexpr double defenseBallDeadbandDegrees = 5.0;
 constexpr bool usePredictedBallAngleForDefense = true;
 constexpr double predictedBallAngleMaxDeltaDegrees = 45.0;
 
+// Field goal centres in the pose frame (mm), used to derive a goal angle from the
+// LIDAR pose when the camera cannot see the goal. +y is the attacked goal; the home
+// goal Y matches GoalieCurveBoundary::kSideVerticalEndY so defense behavior is
+// unchanged. Both goals are centred at x = 0.
+constexpr double kAttackGoalCenterY = 1075.0;
+constexpr double kHomeGoalCenterY   = -1075.0;
+
 #endif

@@ -23,7 +23,6 @@ private:
     double sidewaysHeadingTolerance = 7.0;
     elapsedMillis hardStop;
 
-    static double projectAngle(double lineNormalAngle, double movementAngle);
     static double clampDefenseMoveAngle(double movementAngle);
     static double blendTangentWithNormal(double tangentAngle,
                                          double lineNormalAngle,

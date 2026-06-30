@@ -52,6 +52,17 @@ GoalieCurveBoundaryConfig goalieCurveBoundaryConfig = {
 GoalieCurveBoundary goalieCurveBoundary(goalieCurveBoundaryConfig);
 unsigned long lastPiHeadingTelemetryMs = 0;
 double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
+
+static bool shouldUseGoalieCurveBoundary(double lineAngle)
+{
+  if (lineAngle == -5)
+  {
+    return true;
+  }
+
+  return fabs(Trig::wrapAngle(lineAngle)) <= goalieCurveLineAngleWindowDegrees;
+}
+
 static void initializeDriveMotors()
 {
   pinMode(selectionPin, INPUT);
@@ -218,7 +229,8 @@ void runDefense()
 
   GoalieCurveBoundaryResult goalieCurveResult;
   bool hasGoalieCurveResult = false;
-  if (hasPose)
+  bool useGoalieCurveBoundary = shouldUseGoalieCurveBoundary(lineAngle);
+  if (hasPose && useGoalieCurveBoundary)
   {
     goalieCurveResult = goalieCurveBoundary.evaluate(movement->currentPose, currentOffset);
     hasGoalieCurveResult = true;

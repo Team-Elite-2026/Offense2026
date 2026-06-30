@@ -257,7 +257,9 @@ void runDefense()
   {
     if (homeGoalAngle == -5)
     {
-      defenseMoveAngle = Trig::normalize360(defenseBallAngle);
+
+        homeGoalAngle = Trig::getAngle(movement->currentPose, {0, goalieCurveBoundary.kSideVerticalEndY, 0});
+
     }
     else
     {
@@ -382,9 +384,11 @@ void loop()
                              movement->currentPose.x, movement->currentPose.y);
   if (robotDebugNoMoveMode)
   {
-    // delay(robotDebugLoopDelayMs);
+    delay(robotDebugLoopDelayMs);
+
     for (int i = 0; i < 5; i++) {
       Serial.println();
     }
   }
 }
+

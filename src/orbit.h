@@ -10,6 +10,10 @@ class Orbit
 public:
     Orbit(int robotNum);
     double robotAngle;
+    // Distance (cm) from the robot to the behind-the-ball target point, updated by
+    // CalculateRobotAngle. Used to decelerate on approach so momentum does not
+    // overshoot the shot line. -1 until the first computation.
+    double distanceToTarget = -1;
     double CalculateRobotAngle(double ballAngle, double distance, double derivative, int sampleTime,
                                double goalAngle, bool aimingGoal);
     bool inOrientation;

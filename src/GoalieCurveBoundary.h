@@ -46,6 +46,15 @@ public:
     void printDebug(const GoalieCurveBoundaryResult& result,
                     double blendedRobotAngle) const;
 
+    static constexpr double kLeftX = -390.0;
+    static constexpr double kRightX = 390.0;
+    static constexpr double kLeftArcCenterX = -250.0;
+    static constexpr double kRightArcCenterX = 250.0;
+    static constexpr double kArcRadius = 150.0;
+    static constexpr double kGoalieLineY = -880.0;
+    static constexpr double kArcCenterY = kGoalieLineY - kArcRadius;
+    static constexpr double kSideVerticalEndY = -1075.0;
+
 private:
     struct Candidate {
         double closestX;
@@ -57,14 +66,6 @@ private:
 
     GoalieCurveBoundaryConfig _config;
 
-    static constexpr double kLeftX = -390.0;
-    static constexpr double kRightX = 390.0;
-    static constexpr double kLeftArcCenterX = -250.0;
-    static constexpr double kRightArcCenterX = 250.0;
-    static constexpr double kArcRadius = 150.0;
-    static constexpr double kGoalieLineY = -880.0;
-    static constexpr double kArcCenterY = kGoalieLineY - kArcRadius;
-    static constexpr double kSideVerticalEndY = -1075.0;
 
     static Candidate verticalCandidate(const Point& currentPose,
                                        double x,

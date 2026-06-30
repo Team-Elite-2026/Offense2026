@@ -53,6 +53,9 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
             outputSum -= dTerm;
         }
         offset = (ballAngle > 180 ? -1 : 1) * outputSum;
+
+        // No goal target available; decelerate on raw ball distance instead.
+        distanceToTarget = rawDistance;
     }
     else
     {
@@ -67,6 +70,9 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
         double tx = rawDistance * Trig::Sin(ballAngle) - behindDist * Trig::Sin(goalAngle);
         double ty = rawDistance * Trig::Cos(ballAngle) - behindDist * Trig::Cos(goalAngle);
         double coreOffset = Trig::normalize180(Trig::toDegrees(atan2(tx, ty)) - ballAngle);
+
+        // Distance to the behind-the-ball target; drives the approach deceleration.
+        distanceToTarget = sqrt(tx * tx + ty * ty);
 
         // Tangential go-around term: when we are on the goal side of the ball the
         // target-point core alone would drive through the ball, so add a push that

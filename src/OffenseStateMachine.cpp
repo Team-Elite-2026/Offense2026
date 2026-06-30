@@ -23,6 +23,27 @@ constexpr double kGoalAlignedDegrees = 12.0;
 constexpr double kBallCloseCm       = 15.0;
 constexpr double kBallApproachSpeed = 0.2;
 
+// Orbit deceleration: ease from full offense speed down to a capture-speed floor
+// as the robot closes on the behind-the-ball target point, so momentum does not
+// carry it across the shot line. Full speed beyond kOrbitDecelRangeCm; the floor
+// keeps it rolling into the ball so the dribbler can grab it.
+constexpr double kOrbitDecelRangeCm = 35.0;
+constexpr double kOrbitCaptureSpeed = 0.22;
+
+// Maps distance-to-target (cm) to an approach speed factor. Negative distance
+// (target unknown) falls back to full offense speed.
+double orbitApproachSpeed(double distToTarget)
+{
+  if (distToTarget < 0.0)
+  {
+    return offenseSpeedFactor;
+  }
+  double t = distToTarget / kOrbitDecelRangeCm;
+  if (t > 1.0) t = 1.0;
+  if (t < 0.0) t = 0.0;
+  return kOrbitCaptureSpeed + (offenseSpeedFactor - kOrbitCaptureSpeed) * t;
+}
+
 // Dribbler PWM setpoints (0..255), converted to motor speed factors.
 constexpr double kDribblerApproachPwm = 96.0;   // closing on the ball in orbit
 constexpr double kDribblerTravelPwm   = 145.0;  // carrying the ball in PathPlan
@@ -112,6 +133,7 @@ void OffenseStateMachine::updateVisionAndLineState()
 {
   _camera.CamCalc();
 
+  _movement.currentPose.heading = _compassSensor.currentOffset();
   _lineAngle = _linePCBComm.getLineAngle();
   _goalAngle = _modeControl.state.goalIsBlue ? _camera.blueGoal : _camera.yellowGoal;
   _aimingGoal = _goalAngle != -5;
@@ -162,7 +184,8 @@ void OffenseStateMachine::runOrbitState()
 
   if (_camera.ballAngle != -5)
   {
-    _movement.movement(_orbitAngle, offenseSpeedFactor, _goalAngle, _aimingGoal);
+    double approachSpeed = orbitApproachSpeed(_orbit.distanceToTarget);
+    _movement.movement(_orbitAngle, approachSpeed, _goalAngle, _aimingGoal);
     return;
   }
 

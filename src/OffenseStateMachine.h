@@ -65,6 +65,8 @@ public:
 
   void run(OffenseState configuredState);
 
+  // Reads camera data and snapshots the latest LinePCBComm values. The main
+  // loop owns LinePCBComm::update() so movement and telemetry stay in sync.
   void updateVisionAndLineState();
 
 

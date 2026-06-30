@@ -39,7 +39,7 @@ constexpr double virtualBoundaryMaxY = -820.0;
 constexpr double virtualBoundaryAvoidanceSpeed = 0.15;
 
 constexpr bool goalieCurveDebugEnabled = false;
-constexpr bool goalieCurveDriveEnabled = false;
+constexpr bool goalieCurveDriveEnabled = true;
 constexpr double goalieCurveMinOffsetMm = 60.0;
 constexpr double goalieCurveMaxOffsetMm = 120.0;
 constexpr double goalieCurveRampDistanceMm = 80.0;

@@ -110,7 +110,6 @@ void OffenseStateMachine::run(OffenseState configuredState)
 
 void OffenseStateMachine::updateVisionAndLineState()
 {
-  _linePCBComm.update();
   _camera.CamCalc();
 
   _lineAngle = _linePCBComm.getLineAngle();
@@ -131,7 +130,7 @@ void OffenseStateMachine::updateVisionAndLineState()
 void OffenseStateMachine::runLineAvoidance()
 {
   _avoidanceAngle = _linePCBComm.getAvoidanceAngle();
-  Serial.println("Avoidance angle: " + String(_avoidanceAngle));
+  // Serial.println("Avoidance angle: " + String(_avoidanceAngle));
   _movement.movement(_avoidanceAngle, lineAvoidanceSpeed, 0, false);
 }
 

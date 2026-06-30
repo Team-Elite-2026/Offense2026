@@ -25,10 +25,18 @@ public:
     const int16_t* getActivatedVals()   const { return _activatedVals; }
 
 private:
+    enum class PacketField : uint8_t {
+        LineAngle,
+        AvoidanceAngle,
+        ChordLength,
+        CrossLine
+    };
+
     HardwareSerial& _serial;
     char   _read = '\0';
     String _buffer;
     bool   _areCalibrating = false;
+    PacketField _packetField = PacketField::LineAngle;
 
     float   _lineAngle      = -5.0f;
     float   _avoidanceAngle = -5.0f;
@@ -36,7 +44,16 @@ private:
     bool    _crossLine      = false;
     int16_t _activatedVals[48] = {};
 
+    float _pendingLineAngle      = -5.0f;
+    float _pendingAvoidanceAngle = -5.0f;
+    float _pendingChordLength    = -5.0f;
+    bool  _pendingCrossLine      = false;
+
     void sendCommand(const String& data);
+    void processIncomingByte(char incoming);
+    bool parseBufferedNumber(float& value) const;
+    void commitPendingPacket();
+    void resetPacketParser();
 };
 
 #endif

@@ -8,6 +8,8 @@ GoalieCurveBoundary::GoalieCurveBoundary(const GoalieCurveBoundaryConfig& config
 
 namespace
 {
+constexpr double kMaxBoundaryBlendStrength = 0.65;
+
 const char* stateName(GoalieCurveBoundaryState state)
 {
     switch (state)
@@ -97,11 +99,11 @@ GoalieCurveBoundaryResult GoalieCurveBoundary::evaluate(
     Candidate best = {0.0, 0.0, 0.0, 1.0, 0.0};
     bool hasBest = false;
 
-    keepClosest(verticalCandidate(currentPose, kLeftX, kBottomY, kArcCenterY, -1.0, 0.0), best, hasBest);
+    keepClosest(verticalCandidate(currentPose, kLeftX, kSideVerticalEndY, kArcCenterY, -1.0, 0.0), best, hasBest);
     keepClosest(arcCandidate(currentPose, kLeftArcCenterX, kArcCenterY, M_PI * 0.5, M_PI), best, hasBest);
-    keepClosest(horizontalCandidate(currentPose, kLeftArcCenterX, kRightArcCenterX, kTopY, 0.0, 1.0), best, hasBest);
+    keepClosest(horizontalCandidate(currentPose, kLeftArcCenterX, kRightArcCenterX, kGoalieLineY, 0.0, 1.0), best, hasBest);
     keepClosest(arcCandidate(currentPose, kRightArcCenterX, kArcCenterY, 0.0, M_PI * 0.5), best, hasBest);
-    keepClosest(verticalCandidate(currentPose, kRightX, kBottomY, kArcCenterY, 1.0, 0.0), best, hasBest);
+    keepClosest(verticalCandidate(currentPose, kRightX, kSideVerticalEndY, kArcCenterY, 1.0, 0.0), best, hasBest);
 
     GoalieCurveBoundaryResult result;
     result.closestX = best.closestX;
@@ -141,7 +143,7 @@ GoalieCurveBoundaryResult GoalieCurveBoundary::evaluate(
     }
 
     double rampDistance = (_config.rampDistanceMm <= 0.0) ? 1.0 : _config.rampDistanceMm;
-    result.correctionStrength = Trig::clamp(error / rampDistance, 0.0, 1.0);
+    result.correctionStrength = Trig::clamp(error / rampDistance, 0.0, kMaxBoundaryBlendStrength);
     result.correctionFieldAngle = Trig::normalize360(Trig::toDegrees(atan2(correctionX, correctionY)));
     result.correctionRobotAngle = Trig::normalize360(result.correctionFieldAngle - robotHeadingDegrees);
     return result;
@@ -154,7 +156,10 @@ double GoalieCurveBoundary::blendWithDefenseAngle(
     const GoalieCurveBoundaryResult& result) const
 {
     double defenseFieldAngle = Trig::normalize360(defenseRobotAngle + robotHeadingDegrees);
-    double weightedStrength = boundaryWeight * result.correctionStrength;
+    double weightedStrength = Trig::clamp(
+        boundaryWeight * result.correctionStrength,
+        0.0,
+        kMaxBoundaryBlendStrength);
     double blendedX = Trig::Sin(defenseFieldAngle) +
                       (weightedStrength * Trig::Sin(result.correctionFieldAngle));
     double blendedY = Trig::Cos(defenseFieldAngle) +

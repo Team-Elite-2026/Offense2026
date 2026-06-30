@@ -93,7 +93,7 @@ static void sendHeadingTelemetryToPi()
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Testing Run");
   Serial3.begin(2000000);
 
@@ -167,7 +167,6 @@ void runDefense()
   maxChordLength = linePCBComm.getChordLength();
   if (lineAngle != -5)
   {
-    // Updates crossLine side memory based on angle wrap jumps.
     avoidanceAngle = linePCBComm.getAvoidanceAngle();
     Serial.println("Avoidance Angle: " + String(avoidanceAngle));
   }
@@ -178,8 +177,8 @@ void runDefense()
 
   currentOffset = compassSensor.currentOffset();
 
-  // Serial.println("Line Angle: " + String(lineAngle));
-  // Serial.println("Ball Angle: " + String(camera.ballAngle));
+  Serial.println("Line Angle: " + String(lineAngle));
+  Serial.println("Ball Angle: " + String(camera.ballAngle));
   // Serial.println("Home Goal Angle: " + String(homeGoalAngle));
   // Serial.println("Max Normalized Activated Sensor Distance: " + String(maxChordLength));
   // Serial.println("Cross Line: " + String(crossLineState ? "true" : "false"));
@@ -223,28 +222,17 @@ void runDefense()
   {
     goalieCurveResult = goalieCurveBoundary.evaluate(movement->currentPose, currentOffset);
     hasGoalieCurveResult = true;
+
+    if (goalieCurveDebugEnabled)
+    {
+      goalieCurveBoundary.printDebug(goalieCurveResult, goalieCurveResult.correctionRobotAngle);
+    }
   }
 
-  bool goalieCurveCanDrive = hasGoalieCurveResult &&
-                             goalieCurveDriveEnabled &&
-                             goalieCurveResult.hasCorrection();
   double defenseBallAngle = camera.selectedDefenseBallAngle();
 
   if (defenseBallAngle == -5)
   {
-    if (goalieCurveCanDrive && goalieCurveResult.hardRecovery)
-    {
-      if (goalieCurveDebugEnabled)
-      {
-        goalieCurveBoundary.printDebug(goalieCurveResult, goalieCurveResult.correctionRobotAngle);
-      }
-      movement->movement(goalieCurveResult.correctionRobotAngle,
-                         defenseSpeedFactor,
-                         currentOffset,
-                         false);
-      return;
-    }
-
     movement->stop();
     return;
   }
@@ -271,6 +259,7 @@ void runDefense()
     }
   }
 
+  Serial.println("Home Goal Angle: " + String(homeGoalAngle));
   // Serial.println("Raw Ball Angle: " + String(camera.ballAngle));
   // Serial.println("Predicted Ball Angle: " + String(camera.predictedBallAngle));
   // Serial.println("Defense Ball Angle: " + String(defenseBallAngle));
@@ -278,19 +267,6 @@ void runDefense()
 
   if (defenseMovementActive && defenseMoveAngle < 0)
   {
-    if (goalieCurveCanDrive && goalieCurveResult.hardRecovery)
-    {
-      if (goalieCurveDebugEnabled)
-      {
-        goalieCurveBoundary.printDebug(goalieCurveResult, goalieCurveResult.correctionRobotAngle);
-      }
-      movement->movement(goalieCurveResult.correctionRobotAngle,
-                         defenseSpeedFactor,
-                         currentOffset,
-                         false);
-      return;
-    }
-
     movement->stop();
     return;
   }
@@ -343,9 +319,7 @@ void runDefense()
 
     if (goalieCurveDriveEnabled)
     {
-      finalMoveAngle = goalieCurveResult.hardRecovery
-          ? goalieCurveResult.correctionRobotAngle
-          : blendedRobotAngle;
+      finalMoveAngle = blendedRobotAngle;
       hasMoveCommand = true;
     }
   }
@@ -367,6 +341,7 @@ void runDefense()
     }
   }
 
+  Serial.println("Final Move Angle: " + String(finalMoveAngle));
   movement->movement(finalMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
@@ -378,6 +353,7 @@ void loop()
   }
 
   modeControl->readCommands();
+  linePCBComm.update();
 
   if (modeControl->isOffenseMode())
   {
@@ -387,7 +363,6 @@ void loop()
   }
 
   sendHeadingTelemetryToPi();
-  linePCBComm.update();
   double lcdLineAngle = linePCBComm.getLineAngle();
   double lcdAvoidanceAngle = linePCBComm.getAvoidanceAngle();
 
@@ -395,6 +370,9 @@ void loop()
                              movement->currentPose.x, movement->currentPose.y);
   if (robotDebugNoMoveMode)
   {
-    delay(robotDebugLoopDelayMs);
+    // delay(robotDebugLoopDelayMs);
+    for (int i = 0; i < 5; i++) {
+      Serial.println();
+    }
   }
 }

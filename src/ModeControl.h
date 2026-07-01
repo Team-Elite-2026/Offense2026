@@ -57,6 +57,7 @@ public:
 
 private:
   static constexpr uint8_t       kStartPin                    = 38;
+  static constexpr uint8_t       commPin                      = 27;
   static constexpr uint8_t       kLightGatePin                = 41;
   static constexpr uint8_t       kDebugKickerPin              = 30;
   static constexpr uint8_t       kDebugDribblerPinA           = 11;

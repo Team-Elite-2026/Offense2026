@@ -46,7 +46,7 @@ Print* ModeControl::statusOutput()
 
 bool ModeControl::isStartEnabled() const
 {
-  return digitalRead(kStartPin) == HIGH && digitalRead(commPin) == HIGH;
+  return digitalRead(kStartPin) == HIGH || digitalRead(commPin) == HIGH;
 }
 
 bool ModeControl::isGoalBlueSelected() const

@@ -30,6 +30,12 @@ constexpr double kBallApproachSpeed = 0.2;
 constexpr double kOrbitDecelRangeCm = 35.0;
 constexpr double kOrbitCaptureSpeed = 0.22;
 
+// When the ball is within this many degrees of dead ahead the robot is lined up
+// on the shot line, so it drives at full offense speed to push/shoot rather than
+// decelerating. The deceleration ramp only guards the lateral swing to get behind
+// the ball; forward motion along the line is exactly what we want at full speed.
+constexpr double kOrbitForwardDeadbandDeg = 5.0;
+
 // Maps distance-to-target (cm) to an approach speed factor. Negative distance
 // (target unknown) falls back to full offense speed.
 double orbitApproachSpeed(double distToTarget)
@@ -112,11 +118,11 @@ void OffenseStateMachine::run(OffenseState configuredState)
     return;
   }
 
-  // if (_lineAngle != -5)
-  // {
-  //   runLineAvoidance();
-  //   return;
-  // }
+  if (_lineAngle != -5)
+  {
+    runLineAvoidance();
+    return;
+  }
 
   switch (configuredState)
   {
@@ -155,18 +161,11 @@ void OffenseStateMachine::runLineAvoidance()
 {
   _avoidanceAngle = _linePCBComm.getAvoidanceAngle();
   // Serial.println("Avoidance angle: " + String(_avoidanceAngle));
-  _movement.movement(_avoidanceAngle, lineAvoidanceSpeed, 0, false);
+  _movement.movement(_avoidanceAngle, offenseSpeedFactor, 0, false);
 }
 
 void OffenseStateMachine::runOrbitState()
 {
-    if (_lineAngle != -5)
-  {
-    Serial.println("Runnig line avoidance");
-    runLineAvoidance();
-    return;
-  }
-
   // ballDist is in cm; -5 means the ball is not currently seen.
   bool ballClose = (_camera.ballDist != -5) && (_camera.ballDist < kBallCloseCm);
 

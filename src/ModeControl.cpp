@@ -198,49 +198,6 @@ void ModeControl::setDebugDribbler(int8_t direction, uint8_t pwm)
   printLine(String("Dribbler: ") + directionText + String(pwm));
 }
 
-bool ModeControl::handleStartPositionCommand(const char* command)
-{
-  if (strncmp(command, "STARTPOS:", 9) != 0)
-  {
-    return false;
-  }
-
-  const char* modeToken = command + 9;
-  const char* separator = strchr(modeToken, ':');
-  if (separator == NULL)
-  {
-    return true;
-  }
-
-  char modeBuffer[16];
-  size_t modeLength = (size_t)(separator - modeToken);
-  if (modeLength == 0 || modeLength >= sizeof(modeBuffer))
-  {
-    return true;
-  }
-
-  memcpy(modeBuffer, modeToken, modeLength);
-  modeBuffer[modeLength] = '\0';
-
-  StartMode parsedMode = StartMode::None;
-  StartPosition parsedPosition = StartPosition::None;
-  if (!parseStartMode(modeBuffer, parsedMode) || !parseStartPosition(separator + 1, parsedPosition))
-  {
-    return true;
-  }
-
-  state.hasStartPosition = true;
-  state.startMode        = parsedMode;
-  state.startPosition    = parsedPosition;
-
-  Serial.print("Start Position: ");
-  Serial.print(startModeToken(state.startMode));
-  Serial.print(" / ");
-  Serial.println(startPositionToken(state.startPosition));
-
-  return true;
-}
-
 void ModeControl::handleCommand(const char* command)
 {
   if (command[0] == '\0')
@@ -377,48 +334,4 @@ void ModeControl::readCommands()
 const char* ModeControl::robotModeToken(RobotMode mode)
 {
   return (mode == RobotMode::Offense) ? "OFFENSE" : "DEFENSE";
-}
-
-const char* ModeControl::startModeToken(StartMode mode)
-{
-  switch (mode)
-  {
-    case StartMode::Offense: return "OFFENSE";
-    case StartMode::Defense: return "DEFENSE";
-    default:                 return "NONE";
-  }
-}
-
-const char* ModeControl::startPositionToken(StartPosition position)
-{
-  switch (position)
-  {
-    case StartPosition::BehindBall:        return "BEHIND_BALL";
-    case StartPosition::BehindCenterRing:  return "BEHIND_CENTER_RING";
-    case StartPosition::Goal:              return "GOAL";
-    case StartPosition::Neutral1:          return "NEUTRAL_1";
-    case StartPosition::Neutral2:          return "NEUTRAL_2";
-    case StartPosition::Neutral3:          return "NEUTRAL_3";
-    case StartPosition::Neutral4:          return "NEUTRAL_4";
-    default:                               return "NONE";
-  }
-}
-
-bool ModeControl::parseStartMode(const char* token, StartMode& mode)
-{
-  if (strcmp(token, "OFFENSE") == 0) { mode = StartMode::Offense; return true; }
-  if (strcmp(token, "DEFENSE") == 0) { mode = StartMode::Defense; return true; }
-  return false;
-}
-
-bool ModeControl::parseStartPosition(const char* token, StartPosition& position)
-{
-  if (strcmp(token, "BEHIND_BALL") == 0)        { position = StartPosition::BehindBall;       return true; }
-  if (strcmp(token, "BEHIND_CENTER_RING") == 0) { position = StartPosition::BehindCenterRing; return true; }
-  if (strcmp(token, "GOAL") == 0)               { position = StartPosition::Goal;             return true; }
-  if (strcmp(token, "NEUTRAL_1") == 0)          { position = StartPosition::Neutral1;         return true; }
-  if (strcmp(token, "NEUTRAL_2") == 0)          { position = StartPosition::Neutral2;         return true; }
-  if (strcmp(token, "NEUTRAL_3") == 0)          { position = StartPosition::Neutral3;         return true; }
-  if (strcmp(token, "NEUTRAL_4") == 0)          { position = StartPosition::Neutral4;         return true; }
-  return false;
 }

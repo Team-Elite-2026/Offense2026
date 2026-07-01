@@ -81,13 +81,6 @@ static void initializeDriveMotors()
 
 static void sendHeadingTelemetryToPi()
 {
-  const unsigned long now = millis();
-  if (now - lastPiHeadingTelemetryMs < kPiHeadingTelemetryIntervalMs)
-  {
-    return;
-  }
-  lastPiHeadingTelemetryMs = now;
-
   Serial3.print("T,heading=");
   Serial3.print(compassSensor.currentOffset());
   Serial3.println();
@@ -121,6 +114,7 @@ void setup()
 
   pinMode(30, OUTPUT);
   pinMode(selectionPin, INPUT);
+  pinMode(27, INPUT);
 
   initializeDriveMotors();
   movement = new Movement(*FL, *FR, *BL, *BR, *dribbler, compassSensor);

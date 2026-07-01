@@ -28,6 +28,9 @@ constexpr double defenseSpeedFactor  = 0.24;
 constexpr double offenseSpeedFactor  = 0.28;
 constexpr double lineAvoidanceSpeed  = 0.15;
 
+// How often (ms) the Teensy pushes its heading to the Pi.
+constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
+
 // Virtual rectangle boundary in the same field coordinate frame as
 // Movement::currentPose (millimeters). This acts like an imaginary white line.
 constexpr bool virtualBoundaryDebugEnabled = false;

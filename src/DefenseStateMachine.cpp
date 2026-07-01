@@ -143,7 +143,6 @@ void DefenseStateMachine::run(GameState& gameState)
 
   double desiredPerpendicularHeading = 0.0;
   bool desiredHeadingInBadZone = false;
-  const double badZoneHeadingLimit = 53.0;
   // Serial.println("Desired Perpendicular Heading: " + String(desiredPerpendicularHeading));
   if (lineAngle != -5)
   {
@@ -152,8 +151,8 @@ void DefenseStateMachine::run(GameState& gameState)
     double relNormalB = Trig::wrapAngle(lineAngle + 180.0);
     double fieldNormalA = _compassSensor.robotRelativeToField(relNormalA);
     double fieldNormalB = _compassSensor.robotRelativeToField(relNormalB);
-    bool normalAInBadZone = fabs(fieldNormalA) > badZoneHeadingLimit;
-    bool normalBInBadZone = fabs(fieldNormalB) > badZoneHeadingLimit;
+    bool normalAInBadZone = fabs(fieldNormalA) > kBadZoneHeadingLimitDeg;
+    bool normalBInBadZone = fabs(fieldNormalB) > kBadZoneHeadingLimitDeg;
 
     if (normalAInBadZone != normalBInBadZone)
     {
@@ -165,7 +164,7 @@ void DefenseStateMachine::run(GameState& gameState)
       desiredPerpendicularHeading = _compassSensor.robotRelativeToField(chosenRelativeNormal);
     }
 
-    desiredHeadingInBadZone = fabs(desiredPerpendicularHeading) > badZoneHeadingLimit;
+    desiredHeadingInBadZone = fabs(desiredPerpendicularHeading) > kBadZoneHeadingLimitDeg;
     Serial.println("Field Relative Desired Heading: " + String(desiredPerpendicularHeading));
   }
 
@@ -203,8 +202,10 @@ void DefenseStateMachine::run(GameState& gameState)
   if (desiredHeadingInBadZone)
   {
     Serial.println("YOU ARE APPROACHING A BAD ZONE");
-    if ((desiredPerpendicularHeading >= badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 90.0) < 30.0) ||
-        (desiredPerpendicularHeading <= -badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 270.0) < 30.0))
+    if ((desiredPerpendicularHeading >= kBadZoneHeadingLimitDeg &&
+         Trig::angularDistance(finalMoveAngle, Defense::kRightSlideAngle) < kBadZoneMoveToleranceDeg) ||
+        (desiredPerpendicularHeading <= -kBadZoneHeadingLimitDeg &&
+         Trig::angularDistance(finalMoveAngle, Defense::kLeftSlideAngle) < kBadZoneMoveToleranceDeg))
     {
       _movement.stop();
       return;

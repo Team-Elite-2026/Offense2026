@@ -53,6 +53,40 @@ constexpr double kShotPoseY = kFieldHeightMm * 0.5 - kShotPoseYOffsetMm;  //  54
 constexpr ShotPose kShotPoseRight = { {  kShotPoseX, kShotPoseY, 180.0 },  1.0 };
 constexpr ShotPose kShotPoseLeft  = { { -kShotPoseX, kShotPoseY, 180.0 }, -1.0 };
 
+// ---- Offense tuning constants (kept here so they are easy to find/tune) ----
+
+// PathPlan: how close (mm) to the shot pose counts as "arrived".
+constexpr double kArrivalMarginMm = 30.0;
+
+// SpinShot: sweep speed while searching for the goal, the capped PID spin speed
+// once it is in view, and the |goalAngle| (deg) under which we are aimed to kick.
+constexpr double kSpinSearchSpeed    = 0.06;
+constexpr double kSpinShotMaxSpeed   = 0.18;
+constexpr double kGoalAlignedDegrees = 12.0;
+
+// Orbit direct kick: while in Orbit with the ball captured, kick once |goalAngle|
+// is under this (deg).
+constexpr double kOrbitKickGoalAlignedDeg = 5.0;
+
+// Orbit ball approach: when the ball is closer than this (cm) slow down and start
+// the dribbler to draw the ball in.
+constexpr double kBallCloseCm       = 15.0;
+constexpr double kBallApproachSpeed = 0.2;
+
+// Orbit deceleration: ease from full offense speed down to a capture-speed floor as
+// the robot closes on the behind-the-ball target so momentum does not overshoot the
+// shot line. Full speed beyond kOrbitDecelRangeCm; the floor keeps it rolling in.
+constexpr double kOrbitDecelRangeCm = 35.0;
+constexpr double kOrbitCaptureSpeed = 0.22;
+
+// Dribbler PWM setpoints (0..255), converted to motor speed factors.
+constexpr double kDribblerApproachPwm = 96.0;   // closing on the ball in orbit
+constexpr double kDribblerTravelPwm   = 145.0;  // carrying the ball in PathPlan
+constexpr double kDribblerMaxPwm      = 255.0;  // spin-up, spin shot, and kick
+
+// DribblerToKick: hold the dribbler at full speed this long before spinning.
+constexpr unsigned long kDribblerSpinUpMs = 250;
+
 class OffenseStateMachine
 {
 public:

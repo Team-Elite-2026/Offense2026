@@ -21,8 +21,6 @@
 // still being developed.
 constexpr OffenseState kConfiguredOffenseState = OffenseState::Orbit;
 
-constexpr unsigned long kPiHeadingTelemetryIntervalMs = 100;
-
 CompassSensor compassSensor;
 Calibration calibration(compassSensor);
 Motor* FL = nullptr;

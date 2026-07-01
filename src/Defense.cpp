@@ -46,7 +46,7 @@ double Defense::blendTangentWithNormal(double tangentAngle,
 
     // Close to a full chord means the robot is already centered on the line:
     // keep motion almost purely tangent in this case.
-    double normalGain = (chord >= 0.92) ? 0.0 : (0.65 * (1.0 - chord));
+    double normalGain = (chord >= kChordCenteredThreshold) ? 0.0 : (kNormalBlendGainMax * (1.0 - chord));
 
     // Opposite of avoidanceAngle(): if crossLine is true, normal correction points
     // to lineNormal+180; otherwise it points to lineNormal.
@@ -68,22 +68,21 @@ double Defense::defenseCalc(double ballAngle,
     double rotatedBall = Trig::normalize360(ball + headingCorrection);
     double rotatedGoal = Trig::normalize360(goal + headingCorrection);
 
-    const double angleThreshold = 170.0;
     double angleDiff = Trig::angularDistance(ball, goal);
 
-    bool blocked = (angleDiff > angleThreshold) ||
-                   (rotatedGoal < 115.0 && rotatedBall > 115.0 && rotatedBall < 260.0) ||
-                   (rotatedGoal > 245.0 && rotatedBall < 245.0 && rotatedBall > 100.0);
+    bool blocked = (angleDiff > kBlockedAngleThresholdDeg) ||
+                   (rotatedGoal < kBlockedRightGoalMaxDeg && rotatedBall > kBlockedRightBallMinDeg && rotatedBall < kBlockedRightBallMaxDeg) ||
+                   (rotatedGoal > kBlockedLeftGoalMinDeg && rotatedBall < kBlockedLeftBallMaxDeg && rotatedBall > kBlockedLeftBallMinDeg);
 
     if (blocked)
     {
-        if (angleDiff > 170.0 && hardStop <= 100 && defenseAngle >= 0)
+        if (angleDiff > kBlockedAngleThresholdDeg && hardStop <= kHardStopRecoverMs && defenseAngle >= 0)
         {
             defenseAngle = clampDefenseMoveAngle(defenseAngle + 180.0);
         }
         else
         {
-            hardStop = 200;
+            hardStop = kHardStopHoldMs;
             defenseAngle = -1;
         }
 

@@ -6,7 +6,6 @@
 Orbit::Orbit(int robotNum)
 {
     physicalRobot = robotNum;
-    kd = 0.3;
 }
 
 double Orbit::CalculateRobotAngle(double ballAngle, double distance, double derivative, int sampleTime,
@@ -23,7 +22,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     // the true distance, while the legacy dampening reuses `distance` as a 0..1 value.
     double rawDistance = distance;
 
-    distance = distance / 150;
+    distance = distance / kDistanceScaleCm;
     if (distance > 1)
     {
         distance = 1;
@@ -32,7 +31,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
     // Serial.print("calculated distance: ");
     // Serial.println(distance);
     // double dampenVal = min(1, 0.025 * exp(4.5 * distance));
-    double dampenVal = Trig::min(1, 0.02 * exp(4.5 * distance));
+    double dampenVal = Trig::min(1, kDampenCoeff * exp(kDampenExp * distance));
     // Serial.print("dampen val: ");
     // Serial.println(dampenVal);
 
@@ -45,10 +44,11 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
         // ---- Goal not in view: fall back to the original goal-blind orbit ----
         // takes absolute value of ball angle from 0 - 180 range
         double newballAngle = ballAngle > 180 ? (360 - ballAngle) : ballAngle;
-        double orbitValue = Trig::min(90, 4 * exp(0.1 * (newballAngle - 30)));
+        double orbitValue = Trig::min(kMaxOrbitOffsetDeg,
+                                      kLegacyOrbitCoeff * exp(kLegacyOrbitExp * (newballAngle - kLegacyOrbitAngleOffsetDeg)));
 
         double outputSum = orbitValue * dampenVal;
-        if (dTerm > 3)
+        if (dTerm > kDerivativeTermThreshold)
         {
             outputSum -= dTerm;
         }
@@ -80,7 +80,7 @@ double Orbit::CalculateRobotAngle(double ballAngle, double distance, double deri
         // the same dampening as the legacy orbit (aggressive far out, gentle close in).
         double delta = Trig::normalize180(goalAngle - ballAngle);
         double boost = -kTan * Trig::Sin(delta) * dampenVal;
-        if (fabs(delta) > 179)
+        if (fabs(delta) > kDeltaTieThresholdDeg)
         {
             boost = -kTan * dampenVal;  // break the unstable delta == 180 tie
         }

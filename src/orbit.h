@@ -23,7 +23,7 @@ private:
     int lastAngle;
     double kd;
     int physicalRobot;
-    double behindDist = 11.0;  // cm behind the ball = dribbler contact offset (target point)
+    double behindDist = 14.0;  // cm behind the ball = dribbler contact offset (target point)
     double kTan       = 50.0;  // tangential go-around gain for the goal-aware orbit
 };
 #endif

@@ -169,7 +169,7 @@ void Movement::setDribbler(double speedFactor) {
 }
 
 void Movement::kick() {
-    if (timer > (kickHold + 2000))
+    if (timer > (kickHold + 1000))
     {
         timer = 0;
     }

@@ -40,6 +40,7 @@ constexpr double kOrbitForwardDeadbandDeg = 5.0;
 // (target unknown) falls back to full offense speed.
 double orbitApproachSpeed(double distToTarget)
 {
+  // make this a sin function
   if (distToTarget < 0.0)
   {
     return offenseSpeedFactor;
@@ -161,7 +162,7 @@ void OffenseStateMachine::runLineAvoidance()
 {
   _avoidanceAngle = _linePCBComm.getAvoidanceAngle();
   // Serial.println("Avoidance angle: " + String(_avoidanceAngle));
-  _movement.movement(_avoidanceAngle, offenseSpeedFactor, 0, false);
+  _movement.movement(_avoidanceAngle, 0.4, _goalAngle, true);
 }
 
 void OffenseStateMachine::runOrbitState()
@@ -174,11 +175,7 @@ void OffenseStateMachine::runOrbitState()
 
   if (_modeControl.doWeHaveBall())
   {
-    if (fabs(_goalAngle) < 5)
-    {
       _movement.kick();
-    }
-    return;
   }
 
   if (_camera.ballAngle != -5)

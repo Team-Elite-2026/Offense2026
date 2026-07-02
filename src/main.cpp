@@ -229,9 +229,11 @@ void runDefense()
 
   GoalieCurveBoundaryResult goalieCurveResult;
   bool hasGoalieCurveResult = false;
+  bool forwardRecoveryActive =
+      hasPose && goalieCurveBoundary.needsForwardRecovery(movement->currentPose);
   bool useGoalieCurveBoundary =
       shouldUseGoalieCurveBoundary(lineAngle) ||
-      (hasPose && goalieCurveBoundary.needsForwardRecovery(movement->currentPose));
+      forwardRecoveryActive;
   if (hasPose && useGoalieCurveBoundary)
   {
     goalieCurveResult = goalieCurveBoundary.evaluate(movement->currentPose, currentOffset);
@@ -244,15 +246,18 @@ void runDefense()
   }
 
   double defenseBallAngle = camera.selectedDefenseBallAngle();
+  bool hasDefenseBall = defenseBallAngle != -5;
 
-  if (defenseBallAngle == -5)
+  if (!hasDefenseBall && !forwardRecoveryActive)
   {
     movement->stop();
     return;
   }
 
-  bool ballInDeadband = Trig::angularDistance(defenseBallAngle, 0.0) <= defenseBallDeadbandDegrees;
-  bool defenseMovementActive = !ballInDeadband;
+  bool ballInDeadband =
+      hasDefenseBall &&
+      Trig::angularDistance(defenseBallAngle, 0.0) <= defenseBallDeadbandDegrees;
+  bool defenseMovementActive = hasDefenseBall && !ballInDeadband;
   double defenseMoveAngle = -1.0;
 
   if (defenseMovementActive)
@@ -356,7 +361,7 @@ void runDefense()
   // }
 
   Serial.println("Final Move Angle: " + String(finalMoveAngle));
-  movement->movement(finalMoveAngle, defenseSpeedFactor, 0, false);
+  movement->movement(finalMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
 void loop()

@@ -75,6 +75,24 @@ double Defense::blendTangentWithNormal(double tangentAngle,
     return Trig::normalize360(Trig::toDegrees(atan2(blendedX, blendedY)));
 }
 
+double Defense::lineFollowMoveAngle(double desiredMoveAngle,
+                                    double lineNormalAngle,
+                                    double chordLengthNormalized,
+                                    bool crossLine)
+{
+    if (lineNormalAngle < 0.0)
+    {
+        return Trig::normalize360(desiredMoveAngle);
+    }
+
+    double tangentAngle = projectAngle(lineNormalAngle, desiredMoveAngle);
+    return blendTangentWithNormal(
+        tangentAngle,
+        lineNormalAngle,
+        chordLengthNormalized,
+        crossLine);
+}
+
 double Defense::defenseCalc(double ballAngle,
                             double homeGoalAngle,
                             double headingCorrection,

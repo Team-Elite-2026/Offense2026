@@ -7,7 +7,7 @@ namespace {
 constexpr double kPoseArrivalToleranceMm  = 20.0;
 constexpr double kPoseFullSpeedDistanceMm = 250.0;
 constexpr double kPoseMinSpeedFactor      = 0.06;
-constexpr double kPoseMaxSpeedFactor      = 0.12;
+constexpr double kPoseMaxSpeedFactor      = 0.18;
 }
 
 Movement::Movement(Motor& FLMotor, Motor& FRMotor, Motor& BLMotor, Motor& BRMotor, Motor& dribblerMotor, CompassSensor& compassSensor)

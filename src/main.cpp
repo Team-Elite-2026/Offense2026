@@ -51,6 +51,8 @@ GoalieCurveBoundaryConfig goalieCurveBoundaryConfig = {
 };
 GoalieCurveBoundary goalieCurveBoundary(goalieCurveBoundaryConfig);
 unsigned long lastPiHeadingTelemetryMs = 0;
+elapsedMillis defenseBallLostTimer;
+bool defenseBallLostTimerActive = false;
 double lineAngle, currentOffset, orbitAngle, maxChordLength, goalAngle, avoidanceAngle;
 
 static bool shouldUseGoalieCurveBoundary(double lineAngle)
@@ -168,6 +170,8 @@ void runDefense()
   if (modeControl->state.lineCalibrationActive)
   {
     movement->stop();
+    defenseBallLostTimer = 0;
+    defenseBallLostTimerActive = false;
     calibration.calibrateCompassSensor();
     Serial.println("Calibrating");
     return;
@@ -200,6 +204,8 @@ void runDefense()
   if (!modeControl->isStartEnabled())
   {
     movement->stop();
+    defenseBallLostTimer = 0;
+    defenseBallLostTimerActive = false;
     return;
   }
 
@@ -248,11 +254,15 @@ void runDefense()
 
   double defenseBallAngle = camera.selectedDefenseBallAngle();
   bool hasDefenseBall = defenseBallAngle != -5;
-
-  if (!hasDefenseBall && !forwardRecoveryActive)
+  if (hasDefenseBall)
   {
-    movement->stop();
-    return;
+    defenseBallLostTimer = 0;
+    defenseBallLostTimerActive = false;
+  }
+  else if (!defenseBallLostTimerActive)
+  {
+    defenseBallLostTimer = 0;
+    defenseBallLostTimerActive = true;
   }
 
   bool ballInDeadband =
@@ -321,12 +331,40 @@ void runDefense()
 
   bool hasMoveCommand = defenseMovementActive;
   double finalMoveAngle = defenseMoveAngle;
+  double finalSpeedFactor = defenseSpeedFactor;
+  bool noBallRecoveryReady =
+      !hasDefenseBall &&
+      defenseBallLostTimerActive &&
+      defenseBallLostTimer >= defenseNoBallRecoveryDelayMs;
+
+  if (noBallRecoveryReady && !forwardRecoveryActive && hasPose)
+  {
+    Point noBallTarget = {
+      defenseNoBallTargetX,
+      defenseNoBallTargetY,
+      defenseNoBallTargetHeading
+    };
+
+    double desiredMoveAngle = Trig::getAngle(movement->currentPose, noBallTarget);
+    double recoverySpeed = movement->computeSpeedFactor(movement->currentPose, noBallTarget);
+
+    if (recoverySpeed > 0.0)
+    {
+      finalMoveAngle = defense.lineFollowMoveAngle(
+          desiredMoveAngle,
+          lineAngle,
+          maxChordLength,
+          crossLineState);
+      finalSpeedFactor = recoverySpeed;
+      hasMoveCommand = true;
+    }
+  }
 
   if (hasGoalieCurveResult && goalieCurveResult.hasCorrection())
   {
     double blendedRobotAngle = hasMoveCommand
         ? goalieCurveBoundary.blendWithDefenseAngle(
-            defenseMoveAngle,
+            finalMoveAngle,
             currentOffset,
             goalieCurveBoundaryWeight,
             goalieCurveResult)
@@ -362,7 +400,7 @@ void runDefense()
   // }
 
   Serial.println("Final Move Angle: " + String(finalMoveAngle));
-  movement->movement(finalMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
+  movement->movement(finalMoveAngle, finalSpeedFactor, desiredPerpendicularHeading, false);
 }
 
 void loop()

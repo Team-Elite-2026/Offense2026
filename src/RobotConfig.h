@@ -48,6 +48,10 @@ constexpr double goalieCurveHardMaxOffsetMm = 180.0;
 constexpr double goalieCurveBoundaryWeight = 1;
 constexpr double goalieCurveLineAngleWindowDegrees = 40.0;
 constexpr double defenseBallDeadbandDegrees = 5.0;
+constexpr double defenseNoBallTargetX = 0.0;
+constexpr double defenseNoBallTargetY = -880.0;
+constexpr double defenseNoBallTargetHeading = 0.0;
+constexpr unsigned long defenseNoBallRecoveryDelayMs = 1000;
 constexpr bool usePredictedBallAngleForDefense = true;
 constexpr double predictedBallAngleMaxDeltaDegrees = 45.0;
 

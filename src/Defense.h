@@ -16,6 +16,10 @@ public:
                        double lineNormalAngle,
                        double chordLengthNormalized,
                        bool crossLine);
+    double lineFollowMoveAngle(double desiredMoveAngle,
+                               double lineNormalAngle,
+                               double chordLengthNormalized,
+                               bool crossLine);
 
 private:
     double defenseAngle;

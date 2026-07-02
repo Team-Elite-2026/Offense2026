@@ -39,6 +39,7 @@ public:
 
     GoalieCurveBoundaryResult evaluate(const Point& currentPose,
                                        double robotHeadingDegrees) const;
+    bool needsForwardRecovery(const Point& currentPose) const;
     double blendWithDefenseAngle(double defenseRobotAngle,
                                  double robotHeadingDegrees,
                                  double boundaryWeight,
@@ -65,6 +66,9 @@ private:
     static constexpr double kGoalieLineY = -880.0;
     static constexpr double kArcCenterY = kGoalieLineY - kArcRadius;
     static constexpr double kSideVerticalEndY = -1075.0;
+    static constexpr double kForwardRecoveryMinX = -270.0;
+    static constexpr double kForwardRecoveryMaxX = 270.0;
+    static constexpr double kForwardRecoveryY = -940.0;
 
     static Candidate verticalCandidate(const Point& currentPose,
                                        double x,

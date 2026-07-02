@@ -24,7 +24,7 @@ constexpr double pincontrolRRB = 10;
 constexpr double pinspeedRR    = 5;
 constexpr double selectionPin  = 26;
 
-constexpr double defenseSpeedFactor  = 0.24;
+constexpr double defenseSpeedFactor  = 0.3;
 constexpr double offenseSpeedFactor  = 0.28;
 constexpr double lineAvoidanceSpeed  = 0.15;
 
@@ -45,7 +45,7 @@ constexpr double goalieCurveMaxOffsetMm = 120.0;
 constexpr double goalieCurveRampDistanceMm = 80.0;
 constexpr double goalieCurveHardMinOffsetMm = 30.0;
 constexpr double goalieCurveHardMaxOffsetMm = 180.0;
-constexpr double goalieCurveBoundaryWeight = 1.0;
+constexpr double goalieCurveBoundaryWeight = 1;
 constexpr double goalieCurveLineAngleWindowDegrees = 40.0;
 constexpr double defenseBallDeadbandDegrees = 5.0;
 constexpr bool usePredictedBallAngleForDefense = true;

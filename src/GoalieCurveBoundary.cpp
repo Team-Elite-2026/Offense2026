@@ -92,6 +92,13 @@ void GoalieCurveBoundary::keepClosest(const Candidate& candidate,
     }
 }
 
+bool GoalieCurveBoundary::needsForwardRecovery(const Point& currentPose) const
+{
+    return currentPose.x >= kForwardRecoveryMinX &&
+           currentPose.x <= kForwardRecoveryMaxX &&
+           currentPose.y < kForwardRecoveryY;
+}
+
 GoalieCurveBoundaryResult GoalieCurveBoundary::evaluate(
     const Point& currentPose,
     double robotHeadingDegrees) const
@@ -131,6 +138,19 @@ GoalieCurveBoundaryResult GoalieCurveBoundary::evaluate(
         correctionX = -best.normalX;
         correctionY = -best.normalY;
         error = result.signedDistanceMm - _config.maxOffsetMm;
+    }
+
+    if (needsForwardRecovery(currentPose))
+    {
+        result.state = GoalieCurveBoundaryState::TooClose;
+        correctionX = 0.0;
+        correctionY = 1.0;
+
+        double forwardError = kForwardRecoveryY - currentPose.y;
+        if (forwardError > error)
+        {
+            error = forwardError;
+        }
     }
 
     result.hardRecovery =

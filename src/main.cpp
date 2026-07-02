@@ -229,7 +229,9 @@ void runDefense()
 
   GoalieCurveBoundaryResult goalieCurveResult;
   bool hasGoalieCurveResult = false;
-  bool useGoalieCurveBoundary = shouldUseGoalieCurveBoundary(lineAngle);
+  bool useGoalieCurveBoundary =
+      shouldUseGoalieCurveBoundary(lineAngle) ||
+      (hasPose && goalieCurveBoundary.needsForwardRecovery(movement->currentPose));
   if (hasPose && useGoalieCurveBoundary)
   {
     goalieCurveResult = goalieCurveBoundary.evaluate(movement->currentPose, currentOffset);
@@ -342,19 +344,19 @@ void runDefense()
     return;
   }
 
-  if (desiredHeadingInBadZone)
-  {
-    Serial.println("YOU ARE APPROACHING A BAD ZONE");
-    if ((desiredPerpendicularHeading >= badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 90.0) < 30.0) ||
-        (desiredPerpendicularHeading <= -badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 270.0) < 30.0))
-    {
-      movement->stop();
-      return;
-    }
-  }
+  // if (desiredHeadingInBadZone)
+  // {
+  //   Serial.println("YOU ARE APPROACHING A BAD ZONE");
+  //   if ((desiredPerpendicularHeading >= badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 90.0) < 30.0) ||
+  //       (desiredPerpendicularHeading <= -badZoneHeadingLimit && Trig::angularDistance(finalMoveAngle, 270.0) < 30.0))
+  //   {
+  //     movement->stop();
+  //     return;
+  //   }
+  // }
 
   Serial.println("Final Move Angle: " + String(finalMoveAngle));
-  movement->movement(finalMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
+  movement->movement(finalMoveAngle, defenseSpeedFactor, 0, false);
 }
 
 void loop()

@@ -62,7 +62,8 @@ double Defense::blendTangentWithNormal(double tangentAngle,
 
     // Opposite of avoidanceAngle(): if crossLine is true, normal correction points
     // to lineNormal+180; otherwise it points to lineNormal.
-    double lineCorrectionAngle = crossLine ? Trig::normalize360(lineNormalAngle + 180.0) : Trig::normalize360(lineNormalAngle);
+
+    double lineCorrectionAngle = Trig::normalize360(lineNormalAngle) < 90 || Trig::normalize360(lineNormalAngle) > 270? Trig::normalize360(lineNormalAngle + 180.0) : Trig::normalize360(lineNormalAngle);
     double blendedX = Trig::Sin(tangentAngle) + (normalGain * Trig::Sin(lineCorrectionAngle));
     double blendedY = Trig::Cos(tangentAngle) + (normalGain * Trig::Cos(lineCorrectionAngle));
 

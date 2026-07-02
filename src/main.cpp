@@ -129,6 +129,7 @@ void setup()
   pinMode(5, OUTPUT);
 
   pinMode(30, OUTPUT);
+  pinMode(27, INPUT);
   pinMode(selectionPin, INPUT);
 
   initializeDriveMotors();

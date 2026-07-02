@@ -6,65 +6,57 @@
 #include <trig.h>
 
 namespace {
-// PathPlan: how close (mm) to the shot pose counts as "arrived".
-constexpr double kArrivalMarginMm = 30.0;
-
-// SpinShot: while the goal is not yet in view we sweep at a fixed speed in the
-// chosen pose's search direction; once it is in view we close on it with a PID
-// whose spin speed scales with the heading error to the goal (capped so we never
-// spin violently and throw the ball).  kGoalAlignedDegrees is the |goalAngle|
-// (degrees) under which we are aimed well enough to kick.
-constexpr double kSpinSearchSpeed    = 0.06;
-constexpr double kSpinShotMaxSpeed   = 0.18;
-constexpr double kGoalAlignedDegrees = 12.0;
-
-// Orbit ball approach: when the ball is closer than this (cm) slow down and
-// start the dribbler to draw the ball in.
-constexpr double kBallCloseCm       = 15.0;
-constexpr double kBallApproachSpeed = 0.2;
-
-// Orbit deceleration: ease from full offense speed down to a capture-speed floor
-// as the robot closes on the behind-the-ball target point, so momentum does not
-// carry it across the shot line. Full speed beyond kOrbitDecelRangeCm; the floor
-// keeps it rolling into the ball so the dribbler can grab it.
-constexpr double kOrbitDecelRangeCm = 35.0;
-constexpr double kOrbitCaptureSpeed = 0.22;
-
-// When the ball is within this many degrees of dead ahead the robot is lined up
-// on the shot line, so it drives at full offense speed to push/shoot rather than
-// decelerating. The deceleration ramp only guards the lateral swing to get behind
-// the ball; forward motion along the line is exactly what we want at full speed.
-constexpr double kOrbitForwardDeadbandDeg = 5.0;
-
-// Orbit lost-ball recovery: wait this long before returning to field center.
-constexpr unsigned long kOrbitLostBallCenterDelayMs = 1000;
-
 // Maps distance-to-target (cm) to an approach speed factor. Negative distance
 // (target unknown) falls back to full offense speed.
-double orbitApproachSpeed(double distToTarget)
+double orbitApproachSpeed(double angle)
 {
-  // make this a sin function
-  if (distToTarget < 0.0)
-  {
-    return offenseSpeedFactor;
-  }
-  double t = distToTarget / kOrbitDecelRangeCm;
-  if (t > 1.0) t = 1.0;
-  if (t < 0.0) t = 0.0;
-  return kOrbitCaptureSpeed + (offenseSpeedFactor - kOrbitCaptureSpeed) * t;
+  // // make this a sin function
+  // if (distToTarget < 0.0)
+  // {
+  //   return offenseSpeedFactor;
+  // }
+  // double t = distToTarget / kOrbitDecelRangeCm;
+  // if (t > 1.0) t = 1.0;
+  // if (t < 0.0) t = 0.0;
+  // return kOrbitCaptureSpeed + (offenseSpeedFactor - kOrbitCaptureSpeed) * t;
+
+  return kMinOrbitCaptureSpeed + (offenseSpeedFactor - kMinOrbitCaptureSpeed) * fabs(Trig::Cos(Trig::normalize180(angle)));
 }
-
-// Dribbler PWM setpoints (0..255), converted to motor speed factors.
-constexpr double kDribblerApproachPwm = 96.0;   // closing on the ball in orbit
-constexpr double kDribblerTravelPwm   = 145.0;  // carrying the ball in PathPlan
-constexpr double kDribblerMaxPwm      = 255.0;  // spin-up, spin shot, and kick
-
-// DribblerToKick: hold the dribbler at full speed this long before spinning.
-constexpr unsigned long kDribblerSpinUpMs = 250;
 
 double pwmToFactor(double pwm)
 {
-  return pwm / 255.0;
+  return pwm / kPwmMax;
+}
+
+double blendOrbitWithLineAvoidance(double orbitAngle,
+                                   double avoidanceAngle,
+                                   double chordLengthNormalized)
+{
+  double chord = (chordLengthNormalized < 0.0)
+      ? kOrbitLineDefaultChordLength
+      : Trig::clamp(chordLengthNormalized, 0.0, 1.0);
+
+  double orbitX = Trig::Sin(orbitAngle);
+  double orbitY = Trig::Cos(orbitAngle);
+  double avoidX = Trig::Sin(avoidanceAngle);
+  double avoidY = Trig::Cos(avoidanceAngle);
+
+  double outwardProjection = (orbitX * avoidX) + (orbitY * avoidY);
+  double tangentX = orbitX - (outwardProjection * avoidX);
+  double tangentY = orbitY - (outwardProjection * avoidY);
+  double outwardGain =
+      fmax(outwardProjection, 0.0) +
+      kOrbitLineMinOutwardGain +
+      (kOrbitLineChordOutwardGain * chord);
+
+  double blendedX = tangentX + (outwardGain * avoidX);
+  double blendedY = tangentY + (outwardGain * avoidY);
+  if ((blendedX * blendedX + blendedY * blendedY) < kOrbitLineMinVectorMagnitudeSq)
+  {
+    return Trig::normalize360(avoidanceAngle);
+  }
+
+  return Trig::angleFromVector(blendedX, blendedY);
 }
 
 // Returns the name of the given offense state as a string for debugging.
@@ -149,7 +141,10 @@ void OffenseStateMachine::updateVisionAndLineState()
   _aimingGoal = _goalAngle != -5;
   if (!_aimingGoal)
   {
-    _goalAngle = 0;
+    _goalAngle = Trig::getAngle(
+        _movement.currentPose,
+        {kFallbackGoalX, kFallbackGoalY, kFallbackGoalHeading});
+    _aimingGoal = true;
   }
 
   _orbitAngle = _orbit.CalculateRobotAngle(
@@ -164,8 +159,24 @@ void OffenseStateMachine::updateVisionAndLineState()
 void OffenseStateMachine::runLineAvoidance()
 {
   _avoidanceAngle = _linePCBComm.getAvoidanceAngle();
+  if (_avoidanceAngle < 0.0)
+  {
+    _movement.stop();
+    return;
+  }
+
+  double movementAngle = _avoidanceAngle;
+  if (_camera.ballAngle != -5 && _orbitAngle >= 0.0)
+  {
+    movementAngle = blendOrbitWithLineAvoidance(
+        _orbitAngle,
+        _avoidanceAngle,
+        _linePCBComm.getChordLength());
+  }
+
   // Serial.println("Avoidance angle: " + String(_avoidanceAngle));
-  _movement.movement(_avoidanceAngle, 0.4, _goalAngle, true);
+  // Serial.println("Blended orbit/line angle: " + String(movementAngle));
+  _movement.movement(movementAngle, kOrbitLineAvoidanceSpeed, _goalAngle, true);
 }
 
 void OffenseStateMachine::runOrbitState()
@@ -178,14 +189,18 @@ void OffenseStateMachine::runOrbitState()
 
   if (_modeControl.doWeHaveBall())
   {
-      _movement.kick();
+    _movement.kick();
   }
 
   if (_camera.ballAngle != -5)
   {
     _orbitLostBallTimer = 0;
     _orbitLostBallTimerActive = false;
-    double approachSpeed = orbitApproachSpeed(_orbit.distanceToTarget);
+    double approachSpeed = offenseSpeedFactor;
+    if (Trig::angularDistance(_camera.ballAngle, 0.0) > kOrbitForwardDeadbandDeg)
+    {
+      approachSpeed = orbitApproachSpeed(_orbitAngle);
+    }
     _movement.movement(_orbitAngle, approachSpeed, _goalAngle, _aimingGoal);
     return;
   }
@@ -198,7 +213,10 @@ void OffenseStateMachine::runOrbitState()
 
   if (_orbitLostBallTimer >= kOrbitLostBallCenterDelayMs)
   {
-    _movement.PlanToPose({0, 0, 0});
+    _movement.PlanToPose({
+        kOrbitLostBallRecoveryX,
+        kOrbitLostBallRecoveryY,
+        kOrbitLostBallRecoveryHeading});
     return;
   }
 
@@ -316,6 +334,8 @@ void OffenseStateMachine::resetSequence()
 {
   _activeState = OffenseState::Orbit;
   _targetShotPose = nullptr;
+  _orbitLostBallTimer = 0;
+  _orbitLostBallTimerActive = false;
 }
 
 void OffenseStateMachine::printDebugState() const

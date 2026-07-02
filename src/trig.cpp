@@ -71,6 +71,10 @@ double Trig::angularDistance(double a, double b) {
     return fabs(normalize180(a - b));
 }
 
+double Trig::angleFromVector(double x, double y) {
+    return normalize360(toDegrees(atan2(x, y)));
+}
+
 double Trig::wrapAngle(double angle) {
     if (angle < -180) angle += 360;
     if (angle >   180) angle -= 360;

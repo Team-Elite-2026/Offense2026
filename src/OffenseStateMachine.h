@@ -93,6 +93,9 @@ private:
   const ShotPose* _targetShotPose = nullptr;
   // Times how long DribblerToKick has held the dribbler at full speed.
   elapsedMillis _dribblerToKickTimer;
+  // Times continuous ball loss in Orbit before returning to field center.
+  elapsedMillis _orbitLostBallTimer;
+  bool _orbitLostBallTimerActive = false;
 
   void runLineAvoidance();
   void runOrbitState();

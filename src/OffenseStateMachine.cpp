@@ -36,6 +36,9 @@ constexpr double kOrbitCaptureSpeed = 0.22;
 // the ball; forward motion along the line is exactly what we want at full speed.
 constexpr double kOrbitForwardDeadbandDeg = 5.0;
 
+// Orbit lost-ball recovery: wait this long before returning to field center.
+constexpr unsigned long kOrbitLostBallCenterDelayMs = 1000;
+
 // Maps distance-to-target (cm) to an approach speed factor. Negative distance
 // (target unknown) falls back to full offense speed.
 double orbitApproachSpeed(double distToTarget)
@@ -180,8 +183,22 @@ void OffenseStateMachine::runOrbitState()
 
   if (_camera.ballAngle != -5)
   {
+    _orbitLostBallTimer = 0;
+    _orbitLostBallTimerActive = false;
     double approachSpeed = orbitApproachSpeed(_orbit.distanceToTarget);
     _movement.movement(_orbitAngle, approachSpeed, _goalAngle, _aimingGoal);
+    return;
+  }
+
+  if (!_orbitLostBallTimerActive)
+  {
+    _orbitLostBallTimer = 0;
+    _orbitLostBallTimerActive = true;
+  }
+
+  if (_orbitLostBallTimer >= kOrbitLostBallCenterDelayMs)
+  {
+    _movement.PlanToPose({0, 0, 0});
     return;
   }
 

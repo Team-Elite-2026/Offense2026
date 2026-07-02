@@ -359,6 +359,14 @@ void runDefense()
   movement->movement(finalMoveAngle, defenseSpeedFactor, desiredPerpendicularHeading, false);
 }
 
+void testMode() {
+   if (modeControl->isStartEnabled()) {
+    movement->movement(0,0.2,0, false);
+  } else {
+    movement->stop();
+  }
+}
+
 void loop()
 {
   if (modeControl == nullptr || movement == nullptr || offenseStateMachine == nullptr)
@@ -390,5 +398,7 @@ void loop()
       Serial.println();
     }
   }
+
+ 
 }
 

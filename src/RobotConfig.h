@@ -25,7 +25,7 @@ constexpr double pinspeedRR    = 5;
 constexpr double selectionPin  = 26;
 
 constexpr double defenseSpeedFactor  = 0.4;
-constexpr double offenseSpeedFactor  = 0.28;
+constexpr double offenseSpeedFactor  = 0.2;
 
 // Virtual rectangle boundary in the same field coordinate frame as
 // Movement::currentPose (millimeters). This acts like an imaginary white line.

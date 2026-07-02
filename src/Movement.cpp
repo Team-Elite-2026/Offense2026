@@ -218,7 +218,7 @@ void Movement::runAll() {
 
 void Movement::PlanToPose(Point desiredPose) {
   this->currentPose.heading = compassSensor.currentOffset();
-  double speedfactor = computeSpeedFactor(this->currentPose, desiredPose);
+  double speedfactor = offenseSpeedFactor;
   if (speedfactor <= 0) {
     this->stop();
     return;

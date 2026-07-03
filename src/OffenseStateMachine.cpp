@@ -114,6 +114,12 @@ void OffenseStateMachine::run(OffenseState configuredState)
     return;
   }
 
+  if (needsHomeRecovery())
+  {
+    runHomeRecoveryOverride();
+    return;
+  }
+
   if (_lineAngle != -5)
   {
     runLineAvoidance();
@@ -141,10 +147,10 @@ void OffenseStateMachine::updateVisionAndLineState()
   _aimingGoal = _goalAngle != -5;
   if (!_aimingGoal)
   {
-    _goalAngle = Trig::getAngle(
-        _movement.currentPose,
-        {kFallbackGoalX, kFallbackGoalY, kFallbackGoalHeading});
-    _aimingGoal = true;
+    // _goalAngle = Trig::getAngle(
+    //     _movement.currentPose,
+    //     {kFallbackGoalX, kFallbackGoalY, kFallbackGoalHeading});
+    _goalAngle = 0;
   }
 
   _orbitAngle = _orbit.CalculateRobotAngle(
@@ -177,6 +183,42 @@ void OffenseStateMachine::runLineAvoidance()
   // Serial.println("Avoidance angle: " + String(_avoidanceAngle));
   // Serial.println("Blended orbit/line angle: " + String(movementAngle));
   _movement.movement(movementAngle, kOrbitLineAvoidanceSpeed, _goalAngle, true);
+}
+
+bool OffenseStateMachine::needsHomeRecovery() const
+{
+  if (!offenseHomeRecoveryEnabled)
+  {
+    return false;
+  }
+
+  const Point& pose = _movement.currentPose;
+  bool hasPose = pose.x != -5 && pose.y != -5;
+  if (!hasPose)
+  {
+    return false;
+  }
+
+  bool inCenterChannel =
+      pose.x >= offenseHomeRecoveryMinX &&
+      pose.x <= offenseHomeRecoveryMaxX;
+  bool pastGoalSide =
+      pose.y > offenseHomeRecoveryYBoundary ||
+      pose.y < -offenseHomeRecoveryYBoundary;
+
+  return inCenterChannel && pastGoalSide;
+}
+
+void OffenseStateMachine::runHomeRecoveryOverride()
+{
+  Point homeTarget = {
+    offenseHomeRecoveryTargetX,
+    offenseHomeRecoveryTargetY,
+    offenseHomeRecoveryTargetHeading
+  };
+
+  Serial.println("Offense home recovery active");
+  _movement.PlanToPose(homeTarget);
 }
 
 void OffenseStateMachine::runOrbitState()

@@ -27,6 +27,16 @@ constexpr double selectionPin  = 26;
 constexpr double defenseSpeedFactor  = 0.4;
 constexpr double offenseSpeedFactor  = 0.28;
 
+// Offense recovery zone: if the robot drifts into either center goal channel,
+// temporarily drive back toward field center before resuming normal offense.
+constexpr bool offenseHomeRecoveryEnabled = true;
+constexpr double offenseHomeRecoveryMinX = -270.0;
+constexpr double offenseHomeRecoveryMaxX = 270.0;
+constexpr double offenseHomeRecoveryYBoundary = 890.0;
+constexpr double offenseHomeRecoveryTargetX = 0.0;
+constexpr double offenseHomeRecoveryTargetY = 0.0;
+constexpr double offenseHomeRecoveryTargetHeading = 0.0;
+
 // Virtual rectangle boundary in the same field coordinate frame as
 // Movement::currentPose (millimeters). This acts like an imaginary white line.
 constexpr bool virtualBoundaryDebugEnabled = false;

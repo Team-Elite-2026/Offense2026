@@ -151,6 +151,8 @@ private:
 
   void runLineAvoidance();
   void runOrbitState();
+  bool needsHomeRecovery() const;
+  void runHomeRecoveryOverride();
 
   void runShootSequence();
   void runPathPlanState();

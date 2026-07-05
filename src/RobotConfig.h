@@ -29,7 +29,7 @@ constexpr double offenseSpeedFactor  = 0.28;
 
 // Offense recovery zone: if the robot drifts into either center goal channel,
 // temporarily drive back toward field center before resuming normal offense.
-constexpr bool offenseHomeRecoveryEnabled = true;
+constexpr bool offenseHomeRecoveryEnabled = false;
 constexpr double offenseHomeRecoveryMinX = -270.0;
 constexpr double offenseHomeRecoveryMaxX = 270.0;
 constexpr double offenseHomeRecoveryYBoundary = 890.0;

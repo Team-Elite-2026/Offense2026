@@ -247,20 +247,20 @@ void OffenseStateMachine::runOrbitState()
     return;
   }
 
-  if (!_orbitLostBallTimerActive)
-  {
-    _orbitLostBallTimer = 0;
-    _orbitLostBallTimerActive = true;
-  }
+  // if (!_orbitLostBallTimerActive)
+  // {
+  //   _orbitLostBallTimer = 0;
+  //   _orbitLostBallTimerActive = true;
+  // }
 
-  if (_orbitLostBallTimer >= kOrbitLostBallCenterDelayMs)
-  {
-    _movement.PlanToPose({
-        kOrbitLostBallRecoveryX,
-        kOrbitLostBallRecoveryY,
-        kOrbitLostBallRecoveryHeading});
-    return;
-  }
+  // if (_orbitLostBallTimer >= kOrbitLostBallCenterDelayMs)
+  // {
+  //   _movement.PlanToPose({
+  //       kOrbitLostBallRecoveryX,
+  //       kOrbitLostBallRecoveryY,
+  //       kOrbitLostBallRecoveryHeading});
+  //   return;
+  // }
 
   _movement.stop();
 }
